@@ -289,11 +289,11 @@ class Pipeline:
                     continue
             if groups:   # label a coordinated narrative by the claim being pushed
                 sample = self.conn.execute(
-                    f"SELECT text, lang FROM posts WHERE narrative_id=? AND dup_group IN ({','.join('?' * len(groups))}) "
+                    f"SELECT id, text, lang FROM posts WHERE narrative_id=? AND dup_group IN ({','.join('?' * len(groups))}) "
                     "ORDER BY ts DESC LIMIT 100", (r["id"], *groups)).fetchall()
             else:
                 sample = self.conn.execute(
-                    "SELECT text, lang FROM posts WHERE narrative_id=? ORDER BY ts DESC LIMIT 200", (r["id"],)).fetchall()
+                    "SELECT id, text, lang FROM posts WHERE narrative_id=? ORDER BY ts DESC LIMIT 200", (r["id"],)).fetchall()
             if not sample:
                 continue
             label, source = None, "auto-coord" if groups else "auto"
@@ -301,10 +301,12 @@ class Pipeline:
                 label_budget -= 1
                 label = self.llm.label([x["text"] for x in sample[:8]])
                 source = "llm" if label else source
+            rep = self._representatives(r["id"], sample)
             if not label:
-                label = self._heuristic_label(r["id"], sample)
-            self.conn.execute("UPDATE narratives SET label=?, label_source=?, labeled_at_size=? WHERE id=?",
-                              (label, source, r["size"], r["id"]))
+                label = rep["label"]
+            self.conn.execute("UPDATE narratives SET label=?, label_source=?, labeled_at_size=?, tags=?, "
+                              "rep_post_id=?, en_post_id=? WHERE id=?",
+                              (label, source, r["size"], json.dumps(rep["tags"]), rep["rep_id"], rep["en_id"], r["id"]))
         if self.llm.enabled:
             todo = self.conn.execute(
                 "SELECT p.id, p.text FROM posts p JOIN alerts a ON a.narrative_id=p.narrative_id "
@@ -316,21 +318,25 @@ class Pipeline:
                     self.conn.execute("UPDATE posts SET translation=? WHERE id=?", (tr, t["id"]))
         self.conn.commit()
 
-    def _heuristic_label(self, nid: int, sample) -> str:
+    def _representatives(self, nid: int, sample) -> dict:
+        """Pick what the UI shows for a narrative, as separate fields:
+        tags (top glossary concepts), rep_id (most central post, any language),
+        en_id (most central English post, if any) and the heuristic text label."""
         texts = [s["text"] for s in sample]
         vecs = self.embedder.embed(texts)
         sims = vecs @ self.clusterer.centroid(nid)
-        best = int(sims.argmax())
-        # prefer an English post if it is nearly as central (easier to read)
-        for i in np.argsort(-sims)[:20]:
-            if sample[int(i)]["lang"] == "en" and sims[i] >= sims[best] - 0.15:
-                best = int(i)
-                break
+        order = [int(i) for i in np.argsort(-sims)]
+        central = order[0]
+        en = next((i for i in order if sample[i]["lang"] == "en"), None)
+        # label: prefer an English post if it is nearly as central (easier to read)
+        best = en if en is not None and sims[en] >= sims[central] - 0.15 and en in order[:20] else central
         concepts = Counter(c for t in texts for c in set(self.glossary.concepts(normalize(t))))
-        tags = " · ".join(c for c, n in concepts.most_common(3) if n >= 2)
+        tags = [c for c, n in concepts.most_common(3) if n >= 2]
         rep = texts[best].strip().replace("\n", " ")
         rep = rep if len(rep) <= 120 else rep[:117] + "…"
-        return f"[{tags}] “{rep}”" if tags else f"“{rep}”"
+        label = f"[{' · '.join(tags)}] “{rep}”" if tags else f"“{rep}”"
+        return {"label": label, "tags": tags, "rep_id": sample[central]["id"],
+                "en_id": sample[en]["id"] if en is not None else None}
 
     # ------------------------------------------------------------------ analyst feedback
     def confirmed_to_library(self, alert_id: int) -> None:

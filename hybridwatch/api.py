@@ -6,6 +6,7 @@ so closing the interface never stops the analysis.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from collections import defaultdict
@@ -19,6 +20,7 @@ from pydantic import BaseModel
 
 from .config import load_config, resolve
 from .db import connect, get_setting, jloads, set_setting
+from .text import detect_language, has_cyrillic
 
 CFG = load_config()
 STATIC = Path(__file__).parent / "static"
@@ -65,16 +67,140 @@ def status():
 
 
 # ---------------------------------------------------------------- alerts
-def _row_summary(r) -> dict:
+ALERT_SQL = ("SELECT a.*, n.label, n.label_source, n.tags, n.rep_post_id, n.en_post_id FROM alerts a "
+             "LEFT JOIN narratives n ON n.id=a.narrative_id ")
+OPEN = ("new", "needs_review", "watching")
+_SENTENCES = re.compile(r"(?<=[.!?])\s+")
+
+
+def _english_part(text: str) -> str | None:
+    """Leading English sentences of a multilingual fact-check claim ("Claim that X. Uji ... . Voda ...")."""
+    out = []
+    for s in _SENTENCES.split((text or "").strip()):
+        if has_cyrillic(s) or detect_language(s) != "en":
+            break
+        out.append(s)
+    return " ".join(out).rstrip(". ") or None
+
+
+def _shorten(text: str, n: int = 140) -> str:
+    text = " ".join((text or "").split())
+    return text if len(text) <= n else text[:n].rsplit(" ", 1)[0] + "…"
+
+
+def _factcheck(c, sig: dict):
+    if "debunk_match" not in sig:
+        return None
+    fc = c.execute("SELECT source, claim, verdict, url, date, kind FROM factchecks WHERE id=?",
+                   (sig["debunk_match"]["factcheck_id"],)).fetchone()
+    return dict(fc) if fc else None
+
+
+def _title(c, r, sig: dict) -> tuple[str, str]:
+    """Plain-English title: LLM label > fact-check claim (English part) > central English post > heuristic."""
+    if r["label_source"] == "llm" and r["label"]:
+        return r["label"], "llm"
+    fc = _factcheck(c, sig)
+    if fc and fc["kind"] != "analyst":
+        en = _english_part(fc["claim"])
+        if en:
+            return en, "factcheck"
+    if r["en_post_id"]:
+        p = c.execute("SELECT text FROM posts WHERE id=?", (r["en_post_id"],)).fetchone()
+        if p:
+            return _shorten(p["text"]), "post"
+    return r["label"] or "(labelling…)", "heuristic"
+
+
+def _row_summary(r, c) -> dict:
     stats = jloads(r["stats"], {})
     seen = jloads(r["seen_snapshot"])
     new_posts = max(0, stats.get("size", 0) - seen["posts"]) if seen and r["unread"] else 0
+    title, title_source = _title(c, r, jloads(r["signals"], {}))
     return {"id": r["id"], "status": r["status"], "type": r["type"], "severity": r["severity"],
-            "confidence": r["confidence"], "label": r["label"] or "(labelling…)", "posts": stats.get("size", 0),
+            "confidence": r["confidence"], "title": title, "title_source": title_source,
+            "tags": jloads(r["tags"], []) or [], "label": r["label"] or "(labelling…)", "posts": stats.get("size", 0),
             "growth": stats.get("growth", 0), "accounts": stats.get("accounts", 0),
             "langs": stats.get("langs", {}), "unread": bool(r["unread"]), "bumped_at": r["bumped_at"],
-            "bumped_sim": r["bumped_sim"], "previously_dismissed": bool(r["previously_dismissed"]),
-            "new_posts": new_posts}
+            "bumped_sim": r["bumped_sim"], "created_sim": r["created_sim"],
+            "previously_dismissed": bool(r["previously_dismissed"]), "new_posts": new_posts}
+
+
+def _summary(sig: dict, fc: dict | None) -> str:
+    """One plain-language sentence built only from detected signals. Never says the claim is true or
+    false: a rating is always attributed to the fact-checker."""
+    rated = None
+    if "debunk_match" in sig:
+        if fc and fc.get("kind") == "analyst":
+            rated = "your team already confirmed this claim as disinformation"
+        else:
+            rated = f"fact-checkers already rated this claim {fc['verdict'] if fc else 'False'}"
+    if "coordination" in sig:
+        co = sig["coordination"]
+        out = (f"Likely coordinated campaign. {co['accounts']} accounts posted the same message "
+               f"within {max(1, round(co.get('minutes', 0)))} minutes.")
+        extra = []
+        if "new_accounts" in sig:
+            extra.append(f"{int(sig['new_accounts']['share'] * 100)}% of the accounts are newly created")
+        if rated:
+            extra.append(rated)
+        if extra:
+            s = ", and ".join(extra)
+            out += " " + s[0].upper() + s[1:] + "."
+        return out
+    if "debunk_match" in sig:
+        if fc and fc.get("kind") == "analyst":
+            out = "Repeats a claim your team already confirmed as disinformation."
+        else:
+            out = f"Repeats a claim fact-checkers rated {fc['verdict'] if fc else 'False'}."
+        out += f" {sig['debunk_match']['posts']} posts repeat it."
+        if "trending" in sig:
+            out += f" Volume is {sig['trending']['growth']:g}x its normal rate."
+        return out
+    if "trending" in sig:
+        t = sig["trending"]
+        return (f"Fast-growing story. No sign of coordination. {t['recent']} posts within an hour, "
+                f"{t['growth']:g}x the normal rate.")
+    return ""
+
+
+def _timeline(c, r, nid: int, sig: dict, stats: dict, history: list) -> dict:
+    """Posts over the narrative's lifetime (min. 12 h), with 'Flagged' / 'First credible report' markers
+    and the early-warning lead time between them."""
+    lo, hi = c.execute("SELECT MIN(ts), MAX(ts) FROM posts WHERE narrative_id=?", (nid,)).fetchone()
+    if lo is None:
+        return {}
+    flagged = r["created_sim"]
+    coord_hist = [h["sim"] for h in history if "coordination" in h.get("event", "") and h.get("by") != "analyst"]
+    coord_at = coord_hist[0] if coord_hist else (flagged if "coordination" in sig else None)
+    cred = stats.get("first_credible_ts")
+    now = get_setting(c, "sim_now", 0) or hi
+    marks = [m for m in (flagged, coord_at, cred) if m]
+    start, end = min([lo, *marks]), max([hi, *marks])
+    span_min = 12 * 3600
+    if end - start < span_min:
+        end = max(end, min(start + span_min, now))
+        start = min(start, end - span_min)
+    bucket = max(1800, int((end - start) / 60 // 1800 + 1) * 1800)   # at most ~60 bars
+    start = start // bucket * bucket
+    bars = defaultdict(lambda: [0, 0])
+    groups = _coord_groups(sig)
+    for p in c.execute("SELECT ts, dup_group FROM posts WHERE narrative_id=?", (nid,)):
+        b = int(p["ts"] // bucket * bucket)
+        bars[b][0] += 1
+        bars[b][1] += p["dup_group"] in groups
+    markers = [{"kind": "flagged", "label": "Flagged", "t": flagged}]
+    if coord_at and abs(coord_at - flagged) > bucket:
+        markers.append({"kind": "coordination", "label": "Coordination detected", "t": coord_at})
+    if cred:
+        markers.append({"kind": "credible", "label": "First credible report", "t": cred})
+    alert_at = coord_at or flagged
+    lead = None
+    if cred and alert_at and alert_at < cred:
+        lead = {"seconds": cred - alert_at, "from": alert_at, "to": cred,
+                "what": "Coordination detected" if coord_at and coord_at != flagged else "Flagged"}
+    return {"start": start, "end": end, "bucket": bucket, "markers": markers, "lead": lead,
+            "bars": [{"t": t, "posts": v[0], "copy_paste": v[1]} for t, v in sorted(bars.items())]}
 
 
 def _coord_groups(sig: dict) -> set:
@@ -92,6 +218,12 @@ def _network_accounts(c, nid: int, sig: dict) -> set:
         (nid, *groups))}
 
 
+def _linked(a: set, b: set) -> bool:
+    """Two coordinated account sets belong to the same network."""
+    shared = len(a & b)
+    return shared >= 3 and shared / min(len(a), len(b)) >= 0.2
+
+
 def _related(c, aid: int, nid: int, sig: dict) -> tuple[list, dict]:
     """Other alerts pushed by the same coordinated accounts.
     Returns (related alerts, {author: [alert ids]})."""
@@ -99,13 +231,13 @@ def _related(c, aid: int, nid: int, sig: dict) -> tuple[list, dict]:
     if len(mine) < 3:
         return [], {}
     related, seen_in = [], defaultdict(list)
-    for r in c.execute("SELECT a.id, a.narrative_id, a.signals, a.status, a.severity, n.label FROM alerts a "
-                       "LEFT JOIN narratives n ON n.id=a.narrative_id "
-                       "WHERE a.id!=? AND a.status!='merged' AND a.signals LIKE '%coordination%'", (aid,)).fetchall():
-        theirs = _network_accounts(c, r["narrative_id"], jloads(r["signals"], {}))
+    for r in c.execute(ALERT_SQL + "WHERE a.id!=? AND a.status!='merged' AND a.signals LIKE '%coordination%'",
+                       (aid,)).fetchall():
+        sig_r = jloads(r["signals"], {})
+        theirs = _network_accounts(c, r["narrative_id"], sig_r)
         shared = mine & theirs
-        if len(shared) >= 3 and len(shared) / min(len(mine), len(theirs)) >= 0.2:
-            related.append({"id": r["id"], "label": r["label"] or "(labelling…)", "status": r["status"],
+        if _linked(mine, theirs):
+            related.append({"id": r["id"], "title": _title(c, r, sig_r)[0], "status": r["status"],
                             "severity": r["severity"], "shared": len(shared), "of": len(mine),
                             "share": round(len(shared) / len(mine), 2)})
             for a in shared:
@@ -138,32 +270,80 @@ def list_alerts(folder: str = "inbox", snapshot: float | None = None):
     (except critical ones, which always break through)."""
     c = db()
     st = FOLDERS.get(folder, ("new",))
-    rows = c.execute(
-        f"SELECT a.*, n.label FROM alerts a LEFT JOIN narratives n ON n.id=a.narrative_id "
-        f"WHERE a.status IN ({','.join('?' * len(st))})", st).fetchall()
+    rows = c.execute(ALERT_SQL + f"WHERE a.status IN ({','.join('?' * len(st))})", st).fetchall()
     shown, pending = [], 0
     for r in rows:
         if snapshot and r["bumped_at"] > snapshot and r["severity"] != "critical":
             pending += 1
             continue
-        shown.append(_row_summary(r))
+        shown.append(_row_summary(r, c))
     shown.sort(key=lambda a: (-SEV_RANK.get(a["severity"], 0), -a["bumped_at"]))
     return {"alerts": shown, "pending": pending}
+
+
+@app.get("/api/overview")
+def overview():
+    """What the right pane shows when no alert is selected."""
+    c = db()
+    rows = c.execute(ALERT_SQL + f"WHERE a.status IN ({','.join('?' * len(OPEN))})", OPEN).fetchall()
+    sigs = {r["id"]: jloads(r["signals"], {}) for r in rows}
+    coord = [r for r in rows if "coordination" in sigs[r["id"]]]
+    # linked networks: open coordinated alerts that share accounts, grouped into connected components
+    nets = {r["id"]: _network_accounts(c, r["narrative_id"], sigs[r["id"]]) for r in coord}
+    parent = {i: i for i in nets}
+
+    def root(i):
+        while parent[i] != i:
+            i = parent[i]
+        return i
+    ids = list(nets)
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            if _linked(nets[a], nets[b]):
+                parent[root(a)] = root(b)
+    groups = defaultdict(list)
+    for i in ids:
+        groups[root(i)].append(i)
+    networks = [sorted(g) for g in groups.values() if len(g) >= 2]
+
+    def rank(r):
+        return (r["status"] == "new", SEV_RANK.get(r["severity"], 0), r["bumped_at"] or 0)
+    top = max(rows, key=rank) if rows else None
+    latest = max(rows, key=lambda r: r["created_sim"] or 0) if rows else None
+    brief = lambda r: {"id": r["id"], "title": _title(c, r, sigs[r["id"]])[0], "severity": r["severity"],
+                       "t": r["created_sim"]}
+    return {
+        "open": len(rows),
+        "critical": sum(r["severity"] == "critical" for r in rows),
+        "high": sum(r["severity"] == "high" for r in rows),
+        "coordinated": len(coord),
+        "linked_alerts": sum(len(g) for g in networks),
+        "networks": networks,
+        "latest": brief(latest) if latest else None,
+        "top": brief(top) if top else None,
+    }
 
 
 @app.get("/api/alerts/{aid}")
 def alert_detail(aid: int):
     c = db()
-    r = c.execute("SELECT a.*, n.label, n.label_source FROM alerts a LEFT JOIN narratives n ON n.id=a.narrative_id "
-                  "WHERE a.id=?", (aid,)).fetchone()
+    r = c.execute(ALERT_SQL + "WHERE a.id=?", (aid,)).fetchone()
     if not r:
         raise HTTPException(404)
     sig = jloads(r["signals"], {})
     sug = jloads(r["suggestion"], {})
-    out = _row_summary(r)
+    fc = _factcheck(c, sig)
+    out = _row_summary(r, c)
     out.update({"reasons": jloads(r["reasons"], []), "signals": sig, "stats": jloads(r["stats"], {}),
                 "suggestion": sug, "assessment": jloads(r["assessment"]), "history": jloads(r["history"], []),
-                "dismiss_reason": r["dismiss_reason"], "label_source": r["label_source"]})
+                "dismiss_reason": r["dismiss_reason"], "label_source": r["label_source"],
+                "summary": _summary(sig, fc), "factcheck": fc})
+    # one representative original post, shown as a quote under the title
+    if r["rep_post_id"]:
+        q = c.execute("SELECT text, translation, lang, source_type, author FROM posts WHERE id=?",
+                      (r["rep_post_id"],)).fetchone()
+        if q and _shorten(q["text"]) != out["title"]:
+            out["quote"] = dict(q)
     # what changed since the analyst last opened this alert; then remember what they see now
     stats = out["stats"]
     snap = {"posts": stats.get("size", 0), "accounts": stats.get("accounts", 0), "severity": r["severity"],
@@ -179,15 +359,8 @@ def alert_detail(aid: int):
     # same network: other alerts pushed by the same coordinated accounts
     out["related"], seen_in = _related(c, aid, nid, sig)
 
-    # timeline: posts per 30 min (simulated time)
-    tl = defaultdict(lambda: [0, 0])
+    out["timeline"] = _timeline(c, r, nid, sig, stats, out["history"])
     coord_groups = _coord_groups(sig)
-    for p in c.execute("SELECT ts, dup_group FROM posts WHERE narrative_id=?", (nid,)):
-        b = int(p["ts"] // 1800 * 1800)
-        tl[b][0] += 1
-        if p["dup_group"] in coord_groups:
-            tl[b][1] += 1
-    out["timeline"] = [{"t": t, "posts": v[0], "copy_paste": v[1]} for t, v in sorted(tl.items())]
 
     # evidence: AI-picked key posts first, then most-followed
     key = sug.get("key_evidence", {}).get("value", [])
@@ -207,10 +380,6 @@ def alert_detail(aid: int):
     out["accounts"] = [dict(a) | {"also_in": seen_in.get(a["author"], [])} for a in c.execute(
         "SELECT author, COUNT(*) AS posts, MAX(followers) AS followers, MIN(author_created) AS created, MIN(ts) AS first "
         "FROM posts WHERE narrative_id=? GROUP BY author ORDER BY first LIMIT 15", (nid,))]
-    if "debunk_match" in sig:
-        fc = c.execute("SELECT source, claim, verdict, url, date, kind FROM factchecks WHERE id=?",
-                       (sig["debunk_match"]["factcheck_id"],)).fetchone()
-        out["factcheck"] = dict(fc) if fc else None
     if r["unread"]:
         c.execute("UPDATE alerts SET unread=0 WHERE id=?", (aid,))
         c.commit()
@@ -344,9 +513,9 @@ def activity():
     c = db()
     buckets = [dict(r) for r in c.execute(
         "SELECT CAST(ts/3600 AS INTEGER)*3600 AS t, COUNT(*) AS posts FROM posts GROUP BY t ORDER BY t")]
-    alerts = [dict(r) for r in c.execute(
-        "SELECT a.id, a.created_sim AS t, a.type, a.severity, n.label FROM alerts a "
-        "LEFT JOIN narratives n ON n.id=a.narrative_id WHERE a.status!='merged' ORDER BY a.created_sim")]
+    alerts = [{"id": r["id"], "t": r["created_sim"], "type": r["type"], "severity": r["severity"],
+               "title": _title(c, r, jloads(r["signals"], {}))[0]}
+              for r in c.execute(ALERT_SQL + "WHERE a.status!='merged' ORDER BY a.created_sim")]
     m = c.execute("SELECT SUM(n_posts) AS n, SUM(seconds) AS s, MAX(n_posts*1.0/seconds) AS peak FROM metrics "
                   "WHERE seconds>0").fetchone()
     dec = c.execute("SELECT changed_fields FROM decisions WHERE action='confirm' AND undone=0").fetchall()

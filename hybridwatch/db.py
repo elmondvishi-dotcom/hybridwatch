@@ -76,6 +76,8 @@ MIGRATIONS = [
     ("alerts", "seen_snapshot", "TEXT"),       # what the analyst saw last time -> "what changed since"
     ("decisions", "prev", "TEXT"),             # alert state before the decision -> undo
     ("decisions", "undone", "INTEGER DEFAULT 0"),
+    ("narratives", "tags", "TEXT"),            # top concept tags, shown as chips under the title
+    ("narratives", "en_post_id", "INTEGER"),   # most central English post -> readable title
 ]
 
 

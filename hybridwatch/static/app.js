@@ -7,7 +7,21 @@ const api = async (path, opts) => {
   return r.json();
 };
 const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-const fmt = (ts) => ts ? new Date(ts * 1000).toISOString().slice(5, 16).replace("T", " ") : "—";
+// Human dates in data time (UTC): "2 Nov, 07:31"
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const pad2 = (n) => String(n).padStart(2, "0");
+const fmt = (ts) => {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}, ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+};
+const fmtTime = (ts) => { const d = new Date(ts * 1000); return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`; };
+const duration = (s) => { const m = Math.round(s / 60), h = Math.floor(m / 60); return h ? `${h}h ${pad2(m % 60)}m` : `${m}m`; };
+const plural = (n, word) => `${Number(n).toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+const LANG = { sq: "Albanian", sr: "Serbian", en: "English", unk: "Other" };
+const SRC = { x: "X", facebook: "Facebook", telegram: "Telegram", news: "News", rss: "News site", replay: "Replay", tiktok: "TikTok", youtube: "YouTube" };
+const src = (s) => SRC[s] || s || "";
+const GROWTH = (g) => g >= 3 ? ["Growing fast", "g-fast"] : g >= 1.5 ? ["Growing", "g-up"] : ["Stable", "g-stable"];
 const TYPE = { coordination: "Coordination suspected", debunk_match: "Matches debunked claim", trending: "Trending" };
 const FOLDERS = [["inbox", "Inbox"], ["review", "Needs review"], ["watching", "Watching"], ["confirmed", "Confirmed"], ["dismissed", "Dismissed"]];
 
@@ -51,8 +65,8 @@ $("#pending").onclick = () => { state.snapshot = Date.now() / 1000; refresh(); }
 async function refresh() {
   try {
     const st = await api("/api/status");
-    $("#clock").textContent = `data time ${fmt(st.sim_now)} · ${st.posts.toLocaleString()} posts · ${st.sources} sources` +
-      (st.worker_alive ? "" : " · ⚠ worker not running");
+    $("#clock").textContent = `Last update ${fmt(st.sim_now)} · ${plural(st.posts, "post")} · ${plural(st.sources, "source")}` +
+      (st.worker_alive ? "" : " · ⚠ analysis not running");
     renderFolders(st.folders);
     const q = state.paused ? `&snapshot=${state.snapshot}` : "";
     const res = await api(`/api/alerts?folder=${state.folder}${q}`);
@@ -61,6 +75,7 @@ async function refresh() {
     p.classList.toggle("hidden", !res.pending);
     p.textContent = `${res.pending} new — show`;
     renderList();
+    if (!state.selected && state.view === "alerts") renderOverview();
   } catch (e) { console.error(e); }
 }
 
@@ -76,59 +91,108 @@ function renderList() {
     el.innerHTML = `<div class="empty">${state.folder === "inbox" ? "All caught up. Still monitoring." : "Nothing here."}</div>`;
     return;
   }
-  el.innerHTML = state.alerts.map((a) => `
+  el.innerHTML = state.alerts.map((a) => {
+    const [grow, growCls] = GROWTH(a.growth);
+    return `
     <div class="row ${a.unread ? "unread" : ""} ${a.id === state.selected ? "sel" : ""}" data-id="${a.id}">
       <div class="bar sev-${a.severity}"></div>
       <div class="main">
-        <div class="title">${esc(a.label)}</div>
+        <div class="title" title="${esc(a.title)}">${esc(a.title)}</div>
         <div class="meta">
-          <span class="t-sev c-${a.severity}">${a.severity}</span>
+          <span class="pill sev-${a.severity}">${a.severity}</span>
           <span>${TYPE[a.type] || a.type}</span>
-          <span>${a.posts} posts</span>
-          <span>${a.growth >= 3 ? "↑↑" : a.growth >= 1.5 ? "↑" : "→"}</span>
-          <span>${fmt(a.bumped_sim)}</span>
+          <span>${plural(a.posts, "post")}</span>
+          <span class="${growCls}">${grow}</span>
           ${a.previously_dismissed ? '<span class="tag orange">re-opened</span>' : ""}
           ${a.new_posts ? `<span class="tag blue">+${a.new_posts} new</span>` : ""}
+          <span class="when">${fmt(a.bumped_sim)}</span>
         </div>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   el.querySelectorAll(".row").forEach((r) => r.onclick = () => select(+r.dataset.id));
 }
 
-function showEmpty() { $("#detail").innerHTML = `<div class="empty">Select an alert.</div>`; }
+function showEmpty() { state.selected = null; state.detail = null; renderOverview(); }
+
+// ------------------------------------------------------------------ overview (nothing selected)
+async function renderOverview() {
+  let o;
+  try { o = await api("/api/overview"); } catch (e) { return; }
+  if (state.selected) return;  // an alert was opened meanwhile
+  const big = (v, k, cls = "") => `<div class="ov-card ${cls}"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+  const nets = o.networks.length;
+  const html = `<div class="overview">
+    <h2>Situation overview</h2>
+    <p class="muted">Open alerts across Inbox, Needs review and Watching.</p>
+    <div class="ov-cards">
+      ${big(o.critical, "critical alerts", o.critical ? "crit" : "")}
+      ${big(o.high, "high alerts", o.high ? "high" : "")}
+      ${big(o.coordinated, "coordinated campaigns active", o.coordinated ? "coord" : "")}
+    </div>
+    <div class="ov-row">
+      <div class="ov-box"><h3>Linked networks</h3>
+        ${o.linked_alerts ? `<b>${o.linked_alerts} alerts</b> share accounts with each other — ${nets === 1 ? "likely one network" : `${nets} separate networks`}.
+          <div class="ov-links">${o.networks.map((g) => g.map((id) => `<a class="tag red link" data-goto="${id}">#${id}</a>`).join(" ")).join('<span class="muted"> · </span>')}</div>`
+          : `<span class="muted">No alerts share accounts yet.</span>`}
+      </div>
+      <div class="ov-box"><h3>Latest alert</h3>
+        ${o.latest ? `<a class="link-plain" data-goto="${o.latest.id}"><span class="pill sev-${o.latest.severity}">${o.latest.severity}</span> ${esc(o.latest.title)}</a>
+          <div class="muted">raised ${fmt(o.latest.t)}</div>` : `<span class="muted">No alerts yet. Still monitoring.</span>`}
+      </div>
+    </div>
+    ${o.top ? `<button class="btn primary big" data-goto="${o.top.id}">Open most critical alert →</button>
+      <div class="muted small">${esc(o.top.title)}</div>` : ""}
+    <div class="keys">Keyboard: <kbd>J</kbd>/<kbd>K</kbd> next/previous · <kbd>C</kbd> confirm · <kbd>D</kbd> dismiss · <kbd>R</kbd> needs review · <kbd>U</kbd> undo · <kbd>Esc</kbd> close</div>
+  </div>`;
+  if (!$("#detail .overview") || renderOverview.last !== html) $("#detail").innerHTML = html;  // no flicker on refresh
+  renderOverview.last = html;
+  document.querySelectorAll("#detail [data-goto]").forEach((el) => el.onclick = () => select(+el.dataset.goto));
+}
 
 // ------------------------------------------------------------------ detail
 async function select(id) {
   state.selected = id;
   renderList();
   const d = await api(`/api/alerts/${id}`);
+  if (state.selected !== id) return;  // another alert was opened meanwhile
   state.detail = d;
   renderDetail(d);
+  $("#detail").scrollTop = 0;
 }
 
 function renderDetail(d) {
   const conf = d.confidence >= 0.75 ? "High" : d.confidence >= 0.5 ? "Medium" : "Low";
-  const langs = Object.entries(d.stats.langs || {}).map(([k, v]) => `${k} ${v}`).join(" · ");
+  const langs = Object.entries(d.stats.langs || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${LANG[k] || k} ${v}`).join(" · ");
+  const q = d.quote;
   $("#detail").innerHTML = `
     <div class="actions">
       <button class="btn" id="a-confirm">✓ Confirm</button>
       <button class="btn" id="a-dismiss">✕ Dismiss</button>
       <button class="btn" id="a-review">? Needs review</button>
       <button class="btn" id="a-watch">👁 Watch</button>
-      <span class="status badge">${esc(d.status.replace("_", " "))}</span>
     </div>
     ${sinceLastHTML(d.since_last)}
     <div class="dsec">
-      <h2 class="dtitle">${esc(d.label)} ${d.label_source === "llm" ? '<span class="tag ai">AI label</span>' : ""}</h2>
+      <div class="title-row">
+        <span class="pill sev-${d.severity}">${d.severity}</span>
+        <span class="status badge">${esc(STATUS[d.status] || d.status)}</span>
+        ${d.title_source === "llm" ? '<span class="tag ai">AI title</span>' : ""}
+        ${d.title_source === "factcheck" ? '<span class="tag muted-tag" title="Title taken from the matched fact-check">claim as described by fact-checker</span>' : ""}
+      </div>
+      <h2 class="dtitle">${esc(d.title)}</h2>
+      ${d.tags && d.tags.length ? `<div class="chips concept">${d.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+      ${q ? `<blockquote class="quote">“${esc(q.text)}”
+        <div class="qmeta">${esc(LANG[q.lang] || q.lang)} · ${esc(src(q.source_type))}${q.translation ? ` · <span class="tr">EN: ${esc(q.translation)}</span>` : ""}</div></blockquote>` : ""}
       <div class="chips">
         <span class="tag ${d.type === "coordination" ? "red" : d.type === "debunk_match" ? "orange" : "blue"}">${TYPE[d.type] || d.type}</span>
-        <span class="tag">Severity: <b class="c-${d.severity}">${d.severity}</b></span>
-        <span class="tag">Confidence: ${conf} (${d.confidence})</span>
-        <span class="tag">${d.stats.size} posts · ${d.stats.accounts} accounts</span>
+        <span class="tag" title="System confidence ${d.confidence}">${conf} confidence</span>
+        <span class="tag">${plural(d.stats.size, "post")} · ${plural(d.stats.accounts, "account")}</span>
         <span class="tag">first seen ${fmt(d.stats.first_ts)}</span>
         <span class="tag">${esc(langs)}</span>
       </div>
     </div>
+    ${d.summary ? `<div class="dsec"><div class="verdict sevb-${d.severity}">${esc(d.summary)}</div></div>` : ""}
     <div class="dsec"><h3>Why flagged</h3>
       <ul class="why">${d.reasons.map((r) => `<li class="${r.startsWith("Previously") ? "prev" : ""}">${esc(r)}</li>`).join("")}</ul>
     </div>
@@ -138,7 +202,7 @@ function renderDetail(d) {
       <span class="muted">${esc(d.factcheck.claim)}</span><br>
       ${d.factcheck.url && d.factcheck.url.startsWith("http") ? `<a href="${esc(d.factcheck.url)}" target="_blank" rel="noopener">Open fact-check →</a>` : ""}
     </div></div>` : ""}
-    <div class="dsec"><h3>Timeline (posts per 30 min, copy-paste in red)</h3><div class="chart">${timelineSVG(d.timeline || [])}</div></div>
+    <div class="dsec"><h3>Timeline</h3>${timelineHTML(d.timeline)}</div>
     <div class="dsec"><h3>Evidence</h3>${(d.evidence || []).map(evidenceHTML).join("")}</div>
     <div class="dsec"><h3>Accounts (in order of first post)</h3>
       <table><tr><th>Account</th><th>Posts</th><th>Followers</th><th>Account age at first post</th><th>First post</th></tr>
@@ -177,7 +241,7 @@ function relatedHTML(rel) {
   return `<div class="dsec related"><h3>Same network — linked alerts</h3>
     ${rel.map((r) => `<div class="rel" data-goto="${r.id}">
       <div class="bar sev-${r.severity}"></div>
-      <div class="grow"><b>#${r.id} ${esc(r.label)}</b>
+      <div class="grow"><b>#${r.id} ${esc(r.title)}</b>
         <div class="muted">${r.shared} of this alert's ${r.of} coordinated accounts also pushed it
           <span class="tag ${r.status === "confirmed" ? "red" : ""}">${esc(STATUS[r.status] || r.status)}</span></div></div>
       <div class="pct">${Math.round(r.share * 100)}%<div class="muted">shared</div></div>
@@ -187,9 +251,9 @@ function relatedHTML(rel) {
 }
 
 function evidenceHTML(p) {
-  const src = `${esc(p.source_type)} · ${esc(p.author)}`;
+  const who = `${esc(src(p.source_type))} · ${esc(p.author)}`;
   return `<div class="ev">
-    <div class="head">${p.key ? '<span class="tag ai">★ key</span>' : ""}<b>${src}</b><span>${fmt(p.ts)}</span>
+    <div class="head">${p.key ? '<span class="tag ai">★ key</span>' : ""}<b>${who}</b><span>${fmt(p.ts)}</span>
       <span>${(p.followers || 0).toLocaleString()} followers</span>
       ${p.credibility === "credible" ? '<span class="tag blue">credible outlet</span>' : ""}
       ${p.credibility === "low" ? '<span class="tag orange">low-credibility channel</span>' : ""}
@@ -203,20 +267,59 @@ function evidenceHTML(p) {
   </div>`;
 }
 
-function timelineSVG(tl) {
-  if (!tl.length) return "";
-  const W = 700, H = 120, pad = 20;
-  const t0 = tl[0].t, t1 = tl[tl.length - 1].t + 1800;
-  const max = Math.max(...tl.map((b) => b.posts));
-  const bw = Math.max(2, (W - pad * 2) / ((t1 - t0) / 1800) - 1);
-  const x = (t) => pad + ((t - t0) / (t1 - t0)) * (W - pad * 2);
-  const y = (v) => H - pad - (v / max) * (H - pad * 2);
-  let bars = tl.map((b) => `<rect x="${x(b.t)}" y="${y(b.posts)}" width="${bw}" height="${H - pad - y(b.posts)}" fill="#4c9aff" opacity=".55"><title>${fmt(b.t)}: ${b.posts} posts</title></rect>` +
-    (b.copy_paste ? `<rect x="${x(b.t)}" y="${y(b.copy_paste)}" width="${bw}" height="${H - pad - y(b.copy_paste)}" fill="#ff5d5d"/>` : "")).join("");
-  return `<svg viewBox="0 0 ${W} ${H}"><line x1="${pad}" x2="${W - pad}" y1="${H - pad}" y2="${H - pad}" stroke="#2a323d"/>${bars}
-    <text x="${pad}" y="${H - 4}" fill="#8b96a5" font-size="10">${fmt(t0)}</text>
-    <text x="${W - pad}" y="${H - 4}" fill="#8b96a5" font-size="10" text-anchor="end">${fmt(t1)}</text>
-    <text x="${pad}" y="12" fill="#8b96a5" font-size="10">max ${max}/30min</text></svg>`;
+// Narrative lifetime: posts per bucket (blue), copy-paste (red), labelled markers and the early-warning lead time
+const MARK_COLOR = { flagged: "#f5d547", coordination: "#ff5d5d", credible: "#3ccf8e" };
+function timelineHTML(tl) {
+  if (!tl || !tl.bars || !tl.bars.length) return '<div class="muted">No posts yet.</div>';
+  const W = 760, H = 232, L = 34, R = 14, TOP = 76, BOT = H - 26;
+  const t0 = tl.start, t1 = tl.end + tl.bucket;
+  const max = Math.max(...tl.bars.map((b) => b.posts));
+  const x = (t) => L + ((t - t0) / (t1 - t0)) * (W - L - R);
+  const y = (v) => BOT - (v / max) * (BOT - TOP);
+  const bw = Math.max(2, ((W - L - R) * tl.bucket) / (t1 - t0) - 1);
+  const bars = tl.bars.map((b) =>
+    `<rect x="${x(b.t)}" y="${y(b.posts)}" width="${bw}" height="${BOT - y(b.posts)}" fill="#4c9aff" opacity=".55"><title>${fmt(b.t)}: ${plural(b.posts, "post")}${b.copy_paste ? `, ${b.copy_paste} copy-paste` : ""}</title></rect>` +
+    (b.copy_paste ? `<rect x="${x(b.t)}" y="${y(b.copy_paste)}" width="${bw}" height="${BOT - y(b.copy_paste)}" fill="#ff5d5d"/>` : "")).join("");
+  // x-axis ticks on round hours
+  const span = (t1 - t0) / 3600;
+  const step = [1, 2, 3, 6, 12, 24, 48].find((h) => span / h <= 7) * 3600;
+  let ticks = "";
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) {
+    const midnight = new Date(t * 1000).getUTCHours() === 0;
+    ticks += `<line x1="${x(t)}" x2="${x(t)}" y1="${BOT}" y2="${BOT + 4}" stroke="#2a323d"/>
+      <text x="${x(t)}" y="${H - 8}" fill="#8b96a5" font-size="10" text-anchor="middle">${midnight ? fmt(t).split(",")[0] : fmtTime(t)}</text>`;
+  }
+  // markers, labels staggered so they don't overlap
+  let lastX = -1e9, row = 0;
+  const marks = [...tl.markers].sort((a, b) => a.t - b.t).map((m) => {
+    const mx = x(m.t);
+    row = mx - lastX < 150 ? (row + 1) % 2 : 0;
+    lastX = mx;
+    const ly = 14 + row * 14, anchor = mx > W - 120 ? "end" : mx < L + 60 ? "start" : "middle";
+    return `<line x1="${mx}" x2="${mx}" y1="${ly + 4}" y2="${BOT}" stroke="${MARK_COLOR[m.kind]}" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="${mx}" y="${ly}" fill="${MARK_COLOR[m.kind]}" font-size="11" font-weight="600" text-anchor="${anchor}">${esc(m.label)} · ${fmtTime(m.t)}</text>`;
+  }).join("");
+  // lead-time bracket between "Flagged" and "First credible report"
+  let lead = "", callout = "";
+  if (tl.lead) {
+    const a = x(tl.lead.from), b = x(tl.lead.to), ly = 60;   // below the two marker-label rows (y 14 / 28)
+    const text = `${tl.lead.what} ${duration(tl.lead.seconds)} before credible media`;
+    lead = `<line x1="${a}" x2="${b}" y1="${ly}" y2="${ly}" stroke="#3ccf8e" stroke-width="2"/>
+      <line x1="${a}" x2="${a}" y1="${ly - 4}" y2="${ly + 4}" stroke="#3ccf8e" stroke-width="2"/>
+      <line x1="${b}" x2="${b}" y1="${ly - 4}" y2="${ly + 4}" stroke="#3ccf8e" stroke-width="2"/>
+      <text x="${Math.min(Math.max((a + b) / 2, L + 120), W - 120)}" y="${ly - 5}" fill="#3ccf8e" font-size="11" font-weight="700" text-anchor="middle">${esc(text)}</text>`;
+    callout = `<div class="lead">⏱ <b>${esc(tl.lead.what)} ${duration(tl.lead.seconds)} before the first credible media report</b>
+      <span class="muted">(${fmt(tl.lead.from)} vs ${fmt(tl.lead.to)})</span></div>`;
+  }
+  return `${callout}<div class="chart"><svg viewBox="0 0 ${W} ${H}">
+    <line x1="${L}" x2="${W - R}" y1="${BOT}" y2="${BOT}" stroke="#2a323d"/>
+    <text x="${L - 6}" y="${TOP + 4}" fill="#8b96a5" font-size="10" text-anchor="end">${max}</text>
+    <text x="${L - 6}" y="${BOT}" fill="#8b96a5" font-size="10" text-anchor="end">0</text>
+    ${bars}${ticks}${marks}${lead}</svg></div>
+    <div class="legend"><span><i class="sw" style="background:#4c9aff"></i>posts per ${duration(tl.bucket)}</span>
+      <span><i class="sw" style="background:#ff5d5d"></i>copy-paste (same text from many accounts)</span>
+      <span><i class="ln" style="border-color:#f5d547"></i>alert raised</span>
+      <span><i class="ln" style="border-color:#3ccf8e"></i>first credible media report</span></div>`;
 }
 
 // ------------------------------------------------------------------ decisions
@@ -304,7 +407,7 @@ async function decide(body) {
   const id = state.selected;
   const idx = state.alerts.findIndex((a) => a.id === id);
   const res = await post(`/api/alerts/${id}/decision`, body);
-  const label = state.detail?.label || `#${id}`;
+  const label = state.detail?.title || `#${id}`;
   const msg = body.action === "confirm" && res.changed_fields?.length
     ? `Confirmed — you changed: ${res.changed_fields.join(", ")}` : `${res.event.split(" — ")[0]}: ${label}`;
   state.undo = () => undoDecision(id);
@@ -350,8 +453,8 @@ async function loadActivity() {
     [Math.round(t.avg_per_sec).toLocaleString() + "/s", "average processing speed"],
     [Math.round(t.peak_per_sec).toLocaleString() + "/s", "peak processing speed"],
     [a.alerts.length, "alerts raised"],
-    [a.ai_prefill.confirmed ? `${a.ai_prefill.fields_changed} edits / ${a.ai_prefill.confirmed}` : "—", "analyst edits to AI pre-fill (per confirmed case)"],
-  ].map(([v, k]) => `<div class="card"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+    a.ai_prefill.confirmed ? [`${a.ai_prefill.fields_changed} edits / ${a.ai_prefill.confirmed}`, "analyst edits to AI pre-fill (per confirmed case)"] : null,
+  ].filter(Boolean).map(([v, k]) => `<div class="card"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
   const b = a.buckets;
   if (!b.length) { $("#act-chart").innerHTML = '<div class="muted">No data yet.</div>'; return; }
   const W = 1000, H = 220, pad = 30, t0 = b[0].t, t1 = b[b.length - 1].t + 3600;
@@ -362,12 +465,12 @@ async function loadActivity() {
   const col = { coordination: "#ff5d5d", debunk_match: "#ff9f43", trending: "#4c9aff" };
   $("#act-chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}">
     ${b.map((d) => `<rect x="${x(d.t)}" y="${y(d.posts)}" width="${bw}" height="${H - pad - y(d.posts)}" fill="#4c9aff" opacity=".4"><title>${fmt(d.t)}: ${d.posts}</title></rect>`).join("")}
-    ${a.alerts.map((al) => `<line x1="${x(al.t)}" x2="${x(al.t)}" y1="${pad}" y2="${H - pad}" stroke="${col[al.type] || "#888"}" stroke-width="2"><title>#${al.id} ${esc(al.label || "")}</title></line>`).join("")}
+    ${a.alerts.map((al) => `<line x1="${x(al.t)}" x2="${x(al.t)}" y1="${pad}" y2="${H - pad}" stroke="${col[al.type] || "#888"}" stroke-width="2"><title>#${al.id} ${esc(al.title || "")}</title></line>`).join("")}
     <text x="${pad}" y="${H - 8}" fill="#8b96a5" font-size="11">${fmt(t0)}</text>
     <text x="${W - pad}" y="${H - 8}" fill="#8b96a5" font-size="11" text-anchor="end">${fmt(t1)}</text>
     <text x="${pad}" y="16" fill="#8b96a5" font-size="11">max ${max} posts/hour · lines = alerts (red coordination, orange debunk match, blue trending)</text></svg>`;
   $("#act-alerts").innerHTML = `<table><tr><th>#</th><th>Raised</th><th>Type</th><th>Severity</th><th>Narrative</th></tr>${a.alerts.map((al) =>
-    `<tr><td>${al.id}</td><td>${fmt(al.t)}</td><td>${TYPE[al.type] || al.type}</td><td class="c-${al.severity}">${al.severity}</td><td>${esc(al.label || "")}</td></tr>`).join("")}</table>`;
+    `<tr><td>${al.id}</td><td class="nowrap">${fmt(al.t)}</td><td>${TYPE[al.type] || al.type}</td><td><span class="pill sev-${al.severity}">${al.severity}</span></td><td>${esc(al.title || "")}</td></tr>`).join("")}</table>`;
 }
 
 // ------------------------------------------------------------------ settings page

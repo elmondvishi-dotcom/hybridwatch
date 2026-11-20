@@ -14,6 +14,7 @@ import sqlite3
 from collections import Counter, defaultdict
 
 DAY = 86400.0
+LANG_NAMES = {"sq": "Albanian", "sr": "Serbian", "en": "English", "unk": "other languages"}
 
 
 def narrative_stats(conn: sqlite3.Connection, nid: int, now: float, th: dict) -> dict:
@@ -208,5 +209,6 @@ def reasons(sig: dict, st: dict, fc: dict | None) -> list[str]:
         out.append(f"{t['recent']} posts within an hour, {t['growth']:g}x the normal rate")
     langs = st.get("langs", {})
     if len(langs) >= 2:
-        out.append("Spreading in " + ", ".join(f"{k} ({v})" for k, v in sorted(langs.items(), key=lambda x: -x[1])))
+        out.append("Spreading in " + ", ".join(f"{LANG_NAMES.get(k, k)} ({v})"
+                                               for k, v in sorted(langs.items(), key=lambda x: -x[1])))
     return out

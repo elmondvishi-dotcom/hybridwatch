@@ -31,14 +31,14 @@ LOADING_HTML = """
 <html><body style="margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
 background:#0f1720;color:#cbd5e1;font-family:Segoe UI,sans-serif">
 <div style="text-align:center"><div style="font-size:28px;font-weight:600;color:#fff">HybridWatch</div>
-<div style="margin-top:10px;opacity:.7">Duke u nisur...</div></div></body></html>
+<div style="margin-top:10px;opacity:.7">Starting...</div></div></body></html>
 """
 
 
 ALREADY_RUNNING_HTML = LOADING_HTML.replace(
-    "Duke u nisur...",
-    "HybridWatch është tashmë i hapur në një dritare tjetër.<br>"
-    "Mbylle atë (edhe dritaren e zezë të start.bat), pastaj provo përsëri.")
+    "Starting...",
+    "HybridWatch is already running in another window.<br>"
+    "Close it (including the start.bat console window), then try again.")
 
 
 def is_hybridwatch(port):
