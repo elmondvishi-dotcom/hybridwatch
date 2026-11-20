@@ -11,11 +11,19 @@ const fmt = (ts) => ts ? new Date(ts * 1000).toISOString().slice(5, 16).replace(
 const TYPE = { coordination: "Coordination suspected", debunk_match: "Matches debunked claim", trending: "Trending" };
 const FOLDERS = [["inbox", "Inbox"], ["review", "Needs review"], ["watching", "Watching"], ["confirmed", "Confirmed"], ["dismissed", "Dismissed"]];
 
-const state = { view: "alerts", folder: "inbox", paused: false, snapshot: null, alerts: [], selected: null, detail: null, settings: null };
+const state = { view: "alerts", folder: "inbox", paused: false, snapshot: null, alerts: [], selected: null, detail: null, settings: null, undo: null };
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
-  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.add("hidden"), 2500);
+const SIG = { coordination: "Coordination", new_accounts: "New accounts", no_credible_first: "No credible outlet first",
+  debunk_match: "Debunked claim", trending: "Trending" };
+const STATUS = { new: "Inbox", needs_review: "Needs review", watching: "Watching", confirmed: "Confirmed", dismissed: "Dismissed", merged: "Merged" };
+
+// toast(msg) or toast(msg, {label, run}) -> shows a button (e.g. Undo) and stays a bit longer
+function toast(msg, action) {
+  const t = $("#toast");
+  t.innerHTML = `<span>${esc(msg)}</span>` + (action ? ` <button class="btn undo" id="toast-act">${esc(action.label)}</button>` : "");
+  t.classList.remove("hidden");
+  if (action) $("#toast-act").onclick = () => { t.classList.add("hidden"); action.run(); };
+  clearTimeout(toast.h); toast.h = setTimeout(() => { t.classList.add("hidden"); state.undo = null; }, action ? 8000 : 2500);
 }
 
 // ------------------------------------------------------------------ navigation
@@ -80,6 +88,7 @@ function renderList() {
           <span>${a.growth >= 3 ? "↑↑" : a.growth >= 1.5 ? "↑" : "→"}</span>
           <span>${fmt(a.bumped_sim)}</span>
           ${a.previously_dismissed ? '<span class="tag orange">re-opened</span>' : ""}
+          ${a.new_posts ? `<span class="tag blue">+${a.new_posts} new</span>` : ""}
         </div>
       </div>
     </div>`).join("");
@@ -108,6 +117,7 @@ function renderDetail(d) {
       <button class="btn" id="a-watch">👁 Watch</button>
       <span class="status badge">${esc(d.status.replace("_", " "))}</span>
     </div>
+    ${sinceLastHTML(d.since_last)}
     <div class="dsec">
       <h2 class="dtitle">${esc(d.label)} ${d.label_source === "llm" ? '<span class="tag ai">AI label</span>' : ""}</h2>
       <div class="chips">
@@ -122,6 +132,7 @@ function renderDetail(d) {
     <div class="dsec"><h3>Why flagged</h3>
       <ul class="why">${d.reasons.map((r) => `<li class="${r.startsWith("Previously") ? "prev" : ""}">${esc(r)}</li>`).join("")}</ul>
     </div>
+    ${relatedHTML(d.related)}
     ${d.factcheck ? `<div class="dsec"><h3>Matched fact-check</h3><div class="fcbox">
       <b>${esc(d.factcheck.verdict)}</b> — ${esc(d.factcheck.source)} (${esc(d.factcheck.date)})<br>
       <span class="muted">${esc(d.factcheck.claim)}</span><br>
@@ -134,7 +145,8 @@ function renderDetail(d) {
       ${(d.accounts || []).map((a) => {
         const age = a.created ? Math.round((a.first - a.created) / 86400) : null;
         return `<tr><td>${esc(a.author)}</td><td>${a.posts}</td><td>${(a.followers || 0).toLocaleString()}</td>
-        <td>${age === null ? "—" : age + " days"} ${age !== null && age < 30 ? '<span class="tag orange">new</span>' : ""}</td><td>${fmt(a.first)}</td></tr>`;
+        <td>${age === null ? "—" : age + " days"} ${age !== null && age < 30 ? '<span class="tag orange">new</span>' : ""}</td><td>${fmt(a.first)}
+        ${(a.also_in || []).map((id) => `<a class="tag red link" data-goto="${id}">also in #${id}</a>`).join(" ")}</td></tr>`;
       }).join("")}</table>
     </div>
     <div class="dsec"><h3>History</h3><div class="hist">
@@ -143,6 +155,35 @@ function renderDetail(d) {
   $("#a-dismiss").onclick = (e) => openDismiss(e.target);
   $("#a-review").onclick = (e) => openReview(e.target);
   $("#a-watch").onclick = () => decide({ action: "watch" });
+  document.querySelectorAll("#detail [data-goto]").forEach((el) => el.onclick = () => select(+el.dataset.goto));
+}
+
+// "What changed since you last looked" — shown only when something actually changed
+function sinceLastHTML(s) {
+  if (!s) return "";
+  const parts = [];
+  if (s.posts > 0) parts.push(`<b>+${s.posts}</b> posts`);
+  if (s.accounts > 0) parts.push(`<b>+${s.accounts}</b> accounts`);
+  if (s.new_signals.length) parts.push(`new signal: ${s.new_signals.map((k) => `<span class="tag red">${esc(SIG[k] || k)}</span>`).join(" ")}`);
+  if (s.severity) parts.push(`severity <span class="c-${s.severity[0]}">${s.severity[0]}</span> → <b class="c-${s.severity[1]}">${s.severity[1]}</b>`);
+  return `<div class="dsec since"><h3>New since you last looked · ${fmt(s.since_sim)}</h3>
+    <div class="chips">${parts.map((p) => `<span>${p}</span>`).join('<span class="muted">·</span>')}</div>
+    ${s.events.length ? `<ul class="since-ev">${s.events.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}</div>`;
+}
+
+// Other alerts pushed by the same coordinated accounts
+function relatedHTML(rel) {
+  if (!rel || !rel.length) return "";
+  return `<div class="dsec related"><h3>Same network — linked alerts</h3>
+    ${rel.map((r) => `<div class="rel" data-goto="${r.id}">
+      <div class="bar sev-${r.severity}"></div>
+      <div class="grow"><b>#${r.id} ${esc(r.label)}</b>
+        <div class="muted">${r.shared} of this alert's ${r.of} coordinated accounts also pushed it
+          <span class="tag ${r.status === "confirmed" ? "red" : ""}">${esc(STATUS[r.status] || r.status)}</span></div></div>
+      <div class="pct">${Math.round(r.share * 100)}%<div class="muted">shared</div></div>
+    </div>`).join("")}
+    <p class="muted small">Shared accounts suggest one actor behind several campaigns. Evidence only — attribution is the analyst's call.</p>
+  </div>`;
 }
 
 function evidenceHTML(p) {
@@ -263,17 +304,34 @@ async function decide(body) {
   const id = state.selected;
   const idx = state.alerts.findIndex((a) => a.id === id);
   const res = await post(`/api/alerts/${id}/decision`, body);
-  toast(body.action === "confirm" && res.changed_fields?.length ? `Confirmed — you changed: ${res.changed_fields.join(", ")}` : "Saved");
+  const label = state.detail?.label || `#${id}`;
+  const msg = body.action === "confirm" && res.changed_fields?.length
+    ? `Confirmed — you changed: ${res.changed_fields.join(", ")}` : `${res.event.split(" — ")[0]}: ${label}`;
+  state.undo = () => undoDecision(id);
+  toast(msg, { label: "Undo (U)", run: state.undo });
   await refresh();
   // auto-advance to the next alert
   const next = state.alerts[Math.min(idx, state.alerts.length - 1)];
   if (next) select(next.id); else showEmpty();
 }
 
+async function undoDecision(id) {
+  state.undo = null;
+  try {
+    const res = await post(`/api/alerts/${id}/undo`, {});
+    state.folder = FOLDERS_BY_STATUS[res.status] || state.folder;
+    toast("Undone");
+    await refresh();
+    select(id);
+  } catch (e) { toast("Nothing to undo"); }
+}
+const FOLDERS_BY_STATUS = { new: "inbox", needs_review: "review", watching: "watching", confirmed: "confirmed", dismissed: "dismissed" };
+
 // ------------------------------------------------------------------ keyboard
 document.addEventListener("keydown", (e) => {
   if (state.view !== "alerts" || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
   if (e.key === "Escape") return closePop();
+  if ((e.key === "u" || (e.key === "z" && (e.ctrlKey || e.metaKey))) && state.undo) { e.preventDefault(); $("#toast").classList.add("hidden"); return state.undo(); }
   const i = state.alerts.findIndex((a) => a.id === state.selected);
   if (e.key === "j" && state.alerts.length) select(state.alerts[Math.min(i + 1, state.alerts.length - 1)].id);
   if (e.key === "k" && state.alerts.length) select(state.alerts[Math.max(i - 1, 0)].id);

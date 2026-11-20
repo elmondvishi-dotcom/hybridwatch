@@ -71,6 +71,24 @@ CREATE TABLE IF NOT EXISTS metrics (
 
 _local = threading.local()
 
+# Columns added after the first release. Existing databases get them on connect.
+MIGRATIONS = [
+    ("alerts", "seen_snapshot", "TEXT"),       # what the analyst saw last time -> "what changed since"
+    ("decisions", "prev", "TEXT"),             # alert state before the decision -> undo
+    ("decisions", "undone", "INTEGER DEFAULT 0"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, col, typ in MIGRATIONS:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if col not in cols:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typ}")
+            except sqlite3.OperationalError:  # the other process added it first
+                pass
+    conn.commit()
+
 
 def connect(path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path), timeout=30, check_same_thread=False)
@@ -78,6 +96,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 
