@@ -2,7 +2,12 @@
   --bg: #0f1216; --panel: #161b22; --panel2: #1c232c; --line: #2a323d; --text: #e3e8ee; --muted: #8b96a5;
   --accent: #4c9aff; --crit: #ff5d5d; --high: #ff9f43; --med: #f5d547; --low: #6c7a89; --ok: #3ccf8e;
 }
+:root { color-scheme: dark; }  /* dark native scrollbars and form controls */
 * { box-sizing: border-box; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #3a4554; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
@@ -87,8 +92,9 @@ th { color: var(--muted); font-weight: 500; }
 .field-ai { border-left: 2px solid #a07cff !important; }
 .why-ai { font-size: 11px; color: #a07cff; margin-top: 2px; }
 
-/* pages */
-.page { padding: 20px 28px; overflow-y: auto; height: 100%; max-width: 1100px; }
+/* pages: the whole view scrolls (scrollbar at the window edge), content stays readable width and centred */
+#view-activity, #view-settings { overflow-y: auto; }
+.page { padding: 20px 28px 40px; max-width: 1100px; margin: 0 auto; }
 .cards { display: flex; gap: 12px; flex-wrap: wrap; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; min-width: 170px; }
 .card .v { font-size: 22px; font-weight: 700; }
