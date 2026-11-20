@@ -1,0 +1,34 @@
+[
+ {
+  "id": "demo-fc-1",
+  "source": "DemoCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-03-12",
+  "url": "https://example.org/factcheck/water-mitrovica",
+  "claim": "Claim that the Mitrovica water supply was poisoned and tap water is unsafe to drink. Uji në Mitrovicë është helmuar. Voda u Mitrovici je zatrovana."
+ },
+ {
+  "id": "demo-fc-2",
+  "source": "DemoCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-09-02",
+  "url": "https://example.org/factcheck/kfor-withdrawal",
+  "claim": "Claim that KFOR is withdrawing from Kosovo next week. KFOR po tërhiqet nga Kosova. KFOR se povlači sa Kosova."
+ },
+ {
+  "id": "demo-fc-3",
+  "source": "DemoCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2024-11-20",
+  "url": "https://example.org/factcheck/euro-freeze",
+  "claim": "Claim that banks will freeze or block euro accounts and savings. Bankat do të bllokojnë llogaritë në euro. Banke će zamrznuti račune u evrima."
+ },
+ {
+  "id": "demo-fc-4",
+  "source": "DemoCheck (synthetic fact-checker)",
+  "verdict": "Misleading",
+  "date": "2025-06-01",
+  "url": "https://example.org/factcheck/airport",
+  "claim": "Claim that Pristina airport will close permanently. Aeroporti i Prishtinës mbyllet. Aerodrom u Prištini se zatvara."
+ }
+]

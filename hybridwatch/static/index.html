@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HybridWatch — analyst console</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">HybridWatch <span class="sub">OSINT &amp; hybrid threat triage</span></div>
+  <nav>
+    <button data-view="alerts" class="nav active">Alerts</button>
+    <button data-view="activity" class="nav">Activity</button>
+    <button data-view="settings" class="nav">Settings</button>
+  </nav>
+  <div class="live">
+    <span id="clock" class="muted"></span>
+    <button id="pending" class="pending hidden"></button>
+    <button id="pause" class="btn">⏸ Pause</button>
+    <span id="livebadge" class="badge live-on">● LIVE</span>
+  </div>
+</header>
+
+<main>
+  <!-- ALERTS -->
+  <section id="view-alerts" class="view">
+    <div class="list-pane">
+      <div class="folders" id="folders"></div>
+      <div id="list" class="list"></div>
+    </div>
+    <div class="detail-pane" id="detail">
+      <div class="empty">Select an alert. Keys: <kbd>J</kbd>/<kbd>K</kbd> move · <kbd>C</kbd> confirm · <kbd>D</kbd> dismiss · <kbd>R</kbd> review</div>
+    </div>
+  </section>
+
+  <!-- ACTIVITY -->
+  <section id="view-activity" class="view hidden">
+    <div class="page">
+      <h2>Activity</h2>
+      <div class="cards" id="act-cards"></div>
+      <h3>Posts processed per hour, with alerts</h3>
+      <div id="act-chart" class="chart"></div>
+      <h3>Alerts raised</h3>
+      <div id="act-alerts"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view hidden">
+    <div class="page">
+      <h2>Settings</h2>
+      <p class="muted">Changes apply to the running worker within a few seconds.</p>
+      <h3>Sources</h3>
+      <div id="set-sources"></div>
+      <div class="addrow">
+        <input id="src-name" placeholder="Name">
+        <select id="src-type"><option value="rss">RSS / news site</option><option value="replay">Replay file</option></select>
+        <input id="src-url" placeholder="Feed URL or file path" class="grow">
+        <select id="src-cred"><option>credible</option><option selected>unknown</option><option>low</option></select>
+        <button class="btn" id="src-add">Add source</button>
+      </div>
+      <h3>Focus &amp; filters</h3>
+      <label class="muted">Keywords (comma separated) — raise priority of matching alerts</label>
+      <input id="set-keywords" class="wide">
+      <label class="muted">Regions</label>
+      <input id="set-regions" class="wide">
+      <h3>Fact-checkers</h3>
+      <div id="set-fc"></div>
+      <div class="addrow">
+        <input id="fc-name" placeholder="Name">
+        <select id="fc-type"><option value="rss">RSS</option><option value="file">JSON file</option><option value="google_factcheck">Google Fact Check API</option></select>
+        <input id="fc-url" placeholder="Feed URL / file / search query" class="grow">
+        <button class="btn" id="fc-add">Add fact-checker</button>
+      </div>
+      <div class="saverow"><button class="btn primary" id="save-settings">Save settings</button> <span id="save-msg" class="muted"></span></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

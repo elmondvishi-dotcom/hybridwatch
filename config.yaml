@@ -1,0 +1,97 @@
+# HybridWatch configuration
+# Model/threshold settings live here. Sources, focus and fact-checkers are copied into the
+# database on first run and are then edited from the Settings page in the UI.
+
+db_path: data/hybridwatch.db
+
+# "hashing" = offline, fast, no download (default)
+# "sentence-transformers" = multilingual neural model (pip install sentence-transformers)
+embedder: hashing
+embedder_model: paraphrase-multilingual-MiniLM-L12-v2
+
+# LLM is optional. Used only for: narrative labels, translations, debunk-match confirmation.
+# provider: none | anthropic | openai_compatible
+#   openai_compatible works with a locally hosted open-weight model (e.g. Mistral via Ollama:
+#   base_url http://localhost:11434/v1, model mistral) -> no data leaves your machine.
+llm:
+  provider: none
+  model: claude-haiku-5-5
+  base_url: http://localhost:11434/v1
+  api_key_env: ANTHROPIC_API_KEY
+
+worker:
+  poll_seconds: 2          # how often the worker checks sources
+  batch_size: 500          # max posts processed per cycle
+
+replay:
+  file: data/demo_posts.jsonl
+  speed: 400               # simulated seconds per real second (48h of data ~ 7 min)
+
+thresholds:
+  cluster_similarity: 0.30     # cosine similarity to join an existing narrative
+  merge_similarity: 0.45       # periodic merge of narratives that drifted together
+  min_narrative_size: 8        # narratives smaller than this never alert
+  dup_jaccard: 0.6             # MinHash similarity that counts as copy-paste
+  dup_min_tokens: 10           # shorter posts are never treated as copy-paste
+  coord_min_accounts: 5        # distinct accounts posting near-identical text...
+  coord_window_minutes: 30     # ...within this window => coordination signal
+  new_account_days: 30
+  trend_window_minutes: 60
+  trend_baseline_hours: 6
+  trend_min_posts: 15
+  trend_growth: 3.0            # posts in window vs baseline hourly rate
+  trend_lookback_hours: 6      # check for spikes at every moment in this window
+  debunk_similarity: 0.40
+  debunk_min_posts: 3
+  bump_growth: 2.0             # an alert is re-surfaced when its post count doubles
+  dismissal_expiry_hours: 72   # extra caution after a dismissal fades after this
+  lsh_window_hours: 24
+
+# Words that raise severity when a narrative targets them
+sensitive_targets: [kfor, eulex, election, zgjedhje, izbori, police, policia, policija,
+                    community, komuniteti, zajednica, water, uje, voda, bank, banka, mitrovica]
+
+# ---------------- seeded into the database on first run ----------------
+sources:
+  - {name: "Demo replay dataset", type: replay, url: "data/demo_posts.jsonl", credibility: mixed, enabled: true}
+  # Add real RSS feeds of regional outlets here or in the UI. Credibility is used by the
+  # "no credible outlet reported it first" signal: credible | unknown | low
+  - {name: "Example regional outlet (add RSS URL)", type: rss, url: "", credibility: credible, enabled: false}
+
+focus:
+  keywords: [mitrovica, kfor, election, energy, water, border]
+  regions: ["Kosovo", "Serbia", "Albania", "North Macedonia", "Bosnia and Herzegovina", "Montenegro"]
+
+factcheckers:
+  - {name: "Demo fact-check library (synthetic)", type: file, url: "data/factchecks_demo.json", enabled: true}
+  # Regional fact-checkers. Add each one's RSS feed URL (check their site) and enable.
+  - {name: "Hibrid.info (Kosovo)", type: rss, url: "", enabled: false}
+  - {name: "Krypometri / Kallxo (Kosovo)", type: rss, url: "", enabled: false}
+  - {name: "Raskrikavanje (Serbia)", type: rss, url: "", enabled: false}
+  - {name: "Faktoje (Albania)", type: rss, url: "", enabled: false}
+  - {name: "EUvsDisinfo", type: rss, url: "", enabled: false}
+  # Needs a free API key in env var GOOGLE_FACTCHECK_KEY; url = search query
+  - {name: "Google Fact Check Tools", type: google_factcheck, url: "Kosovo", enabled: false}
+
+# Regional glossary: word stems (any language/script) -> shared concept.
+# Lets Albanian, Serbian and English posts about the same story group together.
+glossary:
+  water: [uje, ujit, ujin, ujerat, ujesjell, voda, vodu, vode, vodi, vodovod, water, tap]
+  poison: [helm, kontamin, ndot, otrov, zatrov, zagadj, kontaminir, poison, contamin, toxic]
+  kfor: [kfor]
+  withdraw: [terhiq, terheq, largohe, povuc, povlac, povlaci, napust, withdraw, leaving, pullout, pull]
+  euro: [euro, evro, eur]
+  bank: [bank, banka, banke, bankat, bankave]
+  freeze: [ngri, zamrz, freez]
+  power: [rrym, energji, kek, struj, elektr, power, electric, blackout, outage, nestan]
+  sabotage: [sabot, diversi, sabotaz, attack, sulm, napad]
+  snow: [bor, debor, sneg, snow, snijeg]
+  road: [rrug, autostrad, put, puteve, putevi, road, highway, magistral]
+  closed: [mbyll, zatvor, closed, bllok, blokir, block]
+  price: [cmim, shtrenjt, cena, cene, poskup, price, cost, tarif]
+  football: [futboll, ndeshj, fudbal, utakmic, football, match, gol, goal, stadi, kombetar, reprezent, gjyqtar, sudij, referee, fitore, pobed, humbj, poraz]
+  election: [zgjedhj, izbor, election, vote, vot, glas]
+  mitrovica: [mitrovic]
+  pristina: [prishtin, pristin, pristina]
+  belgrade: [beograd, belgrade]
+  border: [kufi, granic, border, crossing, jarinj, merdar]
