@@ -14,6 +14,10 @@ Scenario (hours from start):
   30-38  kfor_withdraw   CAMPAIGN: same network as water_poison (actor overlap)
   36-42  power_sabotage  CAMPAIGN: distorts the earlier real outage ("it was sabotage")
   all    energy_prices, noise
+  CYBER  six synthetic cyber claims with recorded verification checks -> data/demo_cyber.json
+         (e: a grid/ISP outage 30 min before power_sabotage = the HYBRID threat), see section 10
+  EVENTS jarinje_protest, merdare_smuggling (organized activity), zvecan_attack (security incident),
+         belgrade_army (regional development), see section 11
 """
 from __future__ import annotations
 
@@ -337,7 +341,199 @@ for _ in range(1500):
     emit(pick(organic[lang]), random.uniform(START, START + 48 * H), base[i] + tail,
          NOISE_EN[i] + tail, lang, "noise", source_type=pick(["x", "facebook", "instagram"]))
 
+# ------------------------------------------------------------------ 10. CYBER scenario (synthetic)
+# Generated after everything above with its own random generator, so the disinformation posts stay identical.
+# Every cyber event is a CLAIM with RECORDED check results (no live network calls in the demo).
+#   a) 10:00 day 1  hacktivists claim DDoS on the eKosova portal: down 40 min, news + ministry follow -> confirmed
+#   b) 12:00 day 1  same group claims DDoS on a bank that stayed up the whole time                -> refuted
+#   c) 18:00 day 1  CISA KEV lists an actively exploited Citrix flaw (product we watch)            -> confirmed
+#   d) 02:00 day 2  ransomware listing of a Kosovo company = re-post of a 2024 victim              -> refuted
+#   e) 11:30 day 2  power + internet outage in Pristina; 30 min later the coordinated
+#                   "the grid was sabotaged" burst (power_sabotage)                                -> HYBRID THREAT
+#   f) 16:00 day 2  hacktivists claim a telecom data leak; nothing supports it                     -> unverified
+M = 60.0
+HACK = make_account("demo_hacktivist_xk", START - 9 * DAY, 2300, "mix")
+MINISTRY = make_account("Ministry of Internal Affairs (demo)", START - 3000 * DAY, 40000, "sq")
+
+
+def cyber_post(author, ts, text, en, lang, narrative, source_type, credibility):
+    emit(author, ts, text, en, lang, narrative, source_type=source_type, credibility=credibility, cyr_ok=False)
+
+
+def availability(t0, pattern, url):
+    """pattern: list of (minutes after claim, up?, detail) -> recorded homepage checks."""
+    return [{"check_name": "availability", "result": "contradicts" if up else "supports", "detail": d,
+             "evidence_url": url, "checked_at": round(t0 + m * M, 1)} for m, up, d in pattern]
+
+
+SYN = " (synthetic)"
+cyber_events = []
+
+# a) DDoS on the government portal -> confirmed
+TA = START + 10 * H
+cyber_post(HACK, TA, "Ekipi ynë e rrëzoi portalin eKosova! #DDoS #OpKosovo", "Our team took down the eKosova portal! #DDoS",
+           "sq", "cyber_gov_ddos", "telegram", "low")
+cyber_post("Kosova Times (demo)", TA + 65 * M, "Portali shtetëror eKosova ishte jashtë funksionit rreth 40 minuta pas një sulmi DDoS.",
+           "The state portal eKosova was down for about 40 minutes after a DDoS attack.", "sq", "cyber_gov_ddos", "news", "credible")
+cyber_post(MINISTRY, TA + 80 * M, "Portali eKosova u sulmua me DDoS. Shërbimet janë rikthyer, nuk ka rrjedhje të të dhënave.",
+           "The eKosova portal was hit by a DDoS attack. Services are restored, no data was leaked.", "sq", "cyber_gov_ddos",
+           "official", "credible")
+cyber_events.append({
+    "ext_id": "demo-cyber-1", "kind": "ddos_claim", "title": "Hacktivists claim DDoS on the eKosova government portal",
+    "target": "eKosova government portal", "sector": "government", "claimed_actor": "demo_hacktivist_xk" + SYN,
+    "source_name": "t.me/demo_hacktivist_xk" + SYN, "source_type": "hacktivist",
+    "source_url": "https://example.org/demo/telegram/demo_hacktivist_xk/101", "claimed_at": TA, "first_seen": TA + 2 * M,
+    "raw": {"synthetic": True, "domain": "ekosova.example.org", "keywords": ["ekosova"], "gt_status": "confirmed",
+            "recorded_checks": availability(TA, [
+                (4, False, "Homepage not reachable (timeout after 10 s)"),
+                (15, False, "Homepage not reachable (HTTP 503)"),
+                (30, False, "Homepage not reachable (HTTP 503)"),
+                (44, True, "Homepage up again (HTTP 200, 0.6 s): about 40 minutes of downtime")],
+                "https://ekosova.example.org/") + [
+                {"check_name": "ioda", "result": "inconclusive", "checked_at": round(TA + 20 * M, 1),
+                 "detail": "No country-level drop (expected: a DDoS on one site rarely shows in network data)",
+                 "evidence_url": "https://ioda.inetintel.cc.gatech.edu/country/XK"}]}})
+
+# b) DDoS on a bank that stayed up -> refuted
+TB = START + 12 * H
+cyber_post(HACK, TB, "Demo Bank Kosovo është poshtë! Sulmi ynë vazhdon. #DDoS", "Demo Bank Kosovo is down! Our attack continues.",
+           "sq", "cyber_bank_claim", "telegram", "low")
+cyber_events.append({
+    "ext_id": "demo-cyber-2", "kind": "ddos_claim", "title": "Hacktivists claim DDoS on Demo Bank Kosovo",
+    "target": "Demo Bank Kosovo" + SYN, "sector": "finance", "claimed_actor": "demo_hacktivist_xk" + SYN,
+    "source_name": "t.me/demo_hacktivist_xk" + SYN, "source_type": "hacktivist",
+    "source_url": "https://example.org/demo/telegram/demo_hacktivist_xk/102", "claimed_at": TB, "first_seen": TB + 1 * M,
+    "raw": {"synthetic": True, "domain": "demobank.example.org", "keywords": ["demo bank"], "gt_status": "refuted",
+            "recorded_checks": availability(TB, [
+                (3, True, "Homepage up (HTTP 200, 0.3 s)"), (12, True, "Homepage up (HTTP 200, 0.4 s)"),
+                (25, True, "Homepage up (HTTP 200, 0.3 s)"), (45, True, "Homepage up (HTTP 200, 0.3 s)")],
+                "https://demobank.example.org/")}})
+
+# c) actively exploited vulnerability in a product we watch -> confirmed
+TC = START + 18 * H
+cyber_events.append({
+    "ext_id": "demo-cyber-3", "kind": "vulnerability", "title": "CVE-2023-4966 (Citrix Bleed) actively exploited",
+    "target": "Citrix NetScaler ADC / Gateway", "sector": "other", "claimed_actor": None,
+    "source_name": "CISA KEV (recorded)" + SYN, "source_type": "kev",
+    "source_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog", "claimed_at": TC, "first_seen": TC,
+    "raw": {"synthetic": True, "cve": "CVE-2023-4966", "vendor": "Citrix", "product": "NetScaler ADC", "gt_status": "confirmed",
+            "recorded_checks": [{"check_name": "kev", "result": "supports", "checked_at": round(TC, 1),
+                                 "detail": "CVE-2023-4966 (Citrix NetScaler ADC and Gateway) listed as actively exploited; "
+                                           "used in ransomware campaigns", "evidence_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4966"}]}})
+
+# d) ransomware listing that re-posts a 2024 victim -> refuted
+TD = START + 26 * H
+cyber_events.append({
+    "ext_id": "demo-cyber-4", "kind": "ransomware_claim", "title": "Ransomware listing: Demo Logistics Sh.p.k.",
+    "target": "Demo Logistics Sh.p.k." + SYN, "sector": "other", "claimed_actor": "DemoLocker" + SYN,
+    "source_name": "Ransomware tracker (recorded)" + SYN, "source_type": "ransomware_tracker",
+    "source_url": "https://example.org/demo/ransomware-tracker/demo-logistics", "claimed_at": TD, "first_seen": TD + 5 * M,
+    "raw": {"synthetic": True, "country": "XK", "description": "Logistics company based in Prishtina, Kosovo",
+            "previously_listed_at": "14 May 2024", "previous_listing_url": "https://example.org/demo/ransomware-tracker/demo-logistics-2024",
+            "gt_status": "refuted"}})
+
+# e) outage at the grid / ISP operator, then the coordinated sabotage narrative 30 min later -> HYBRID
+TE = START + 35.5 * H
+cyber_post("Kosova Times (demo)", TE + 20 * M,
+           "Ndërprerje e rrymës dhe e internetit në disa lagje të Prishtinës. Operatori po heton shkakun.",
+           "Power and internet outage in several Pristina neighbourhoods. The operator is investigating the cause.",
+           "sq", "grid_outage", "news", "credible")
+cyber_post("Novi Dnevnik (demo)", TE + 50 * M, "Nestanak struje i interneta u delovima Prištine, uzrok se istražuje.",
+           "Power and internet outage in parts of Pristina, the cause is being investigated.", "sr", "grid_outage", "news", "credible")
+cyber_events.append({
+    "ext_id": "demo-cyber-5", "kind": "outage", "title": "Power and internet outage in Pristina",
+    "target": "Pristina grid and ISP operator (AS0000)" + SYN, "sector": "energy", "claimed_actor": None,
+    "source_name": "IODA (recorded)" + SYN, "source_type": "ioda",
+    "source_url": "https://ioda.inetintel.cc.gatech.edu/country/XK", "claimed_at": TE, "first_seen": TE + 8 * M,
+    "raw": {"synthetic": True, "asn": "AS0000", "keywords": ["internet"], "gt_status": "confirmed", "gt_hybrid": "power_sabotage",
+            "recorded_checks": [{"check_name": "ioda", "result": "supports", "checked_at": round(TE + 8 * M, 1),
+                                 "detail": "Active-probing signal for AS0000 dropped 58%, BGP visibility -31% (Pristina region)",
+                                 "evidence_url": "https://ioda.inetintel.cc.gatech.edu/asn/0"}]}})
+
+# f) unsupported leak claim -> stays unverified
+TF = START + 40 * H
+cyber_post(HACK, TF, "Kemi të dhënat e klientëve të Demo Telecom. Së shpejti publikojmë. #leak",
+           "We have Demo Telecom's customer data. Publishing soon.", "sq", "cyber_telecom_claim", "telegram", "low")
+cyber_events.append({
+    "ext_id": "demo-cyber-6", "kind": "data_breach_claim", "title": "Hacktivists claim a customer-data leak at Demo Telecom",
+    "target": "Demo Telecom Kosovo" + SYN, "sector": "telecom", "claimed_actor": "demo_hacktivist_xk" + SYN,
+    "source_name": "t.me/demo_hacktivist_xk" + SYN, "source_type": "hacktivist",
+    "source_url": "https://example.org/demo/telegram/demo_hacktivist_xk/103", "claimed_at": TF, "first_seen": TF + 3 * M,
+    "raw": {"synthetic": True, "country": "XK", "keywords": ["demo telecom"], "gt_status": "unverified"}})
+
+# ------------------------------------------------------------------ 11. EVENTS scenario (synthetic): other threat categories
+# Generated last, so every post above stays identical. Texts avoid glossary words for roads / closures so these
+# stories do not merge with the snow story.
+#   a) 15:00 day 1  protest with barricades at the Jarinje crossing            -> organized activity, north
+#   b) 20:00 day 1  police arrest a weapons-smuggling group near Merdare        -> organized activity
+#   c) 03:00 day 2  explosive device thrown at the police station in Zvečan    -> security incident, north
+#   d) 14:00 day 2  Belgrade raises army readiness near the administrative line -> regional development
+POLICE = make_account("Kosovo Police (demo)", START - 3000 * DAY, 150000, "sq")
+
+
+def official(author, ts, text, en, narrative):
+    emit(author, ts, text, en, "sq", narrative, source_type="official", credibility="credible", cyr_ok=False)
+
+
+T = START + 15 * H
+news("Novi Dnevnik (demo)", T + 0.4 * H, "Protest i barikade na prelazu Jarinje, kamioni ne prolaze.",
+     "Protest and barricades at the Jarinje crossing, trucks cannot get through.", "jarinje_protest")
+news("Kosova Times (demo)", T + 0.7 * H, "Protestë me barrikada në pikëkalimin e Jarinjës, kamionët nuk kalojnë.",
+     "Protest with barricades at the Jarinje crossing, trucks cannot get through.", "jarinje_protest")
+organic_wave("jarinje_protest", T, T + 7 * H, 60, [
+    [("Protestë me barrikada në pikëkalimin e Jarinjës", "Protest i barikade na prelazu Jarinje", "Protest and barricades at the Jarinje crossing"),
+     ("Protestuesit ngritën barrikada te Jarinja", "Demonstranti podigli barikade kod Jarinja", "Protesters set up barricades at Jarinje")],
+    [("kamionët nuk kalojnë", "kamioni ne prolaze", "trucks cannot get through"), ("barrikada me kamionë", "barikade od kamiona",
+     "barricades made of trucks"), ("qindra njerëz në protestë", "stotine ljudi na protestu", "hundreds of people at the protest")],
+    [("Policia e ka rrethuar zonën.", "Policija je opkolila mesto.", "Police surrounded the area."), ("", "", ""),
+     ("Kush e organizoi këtë?", "Ko je ovo organizovao?", "Who organised this?")]])
+
+T = START + 20 * H
+official(POLICE, T, "Policia arrestoi pesë persona për kontrabandë armësh afër Merdares. U konfiskuan armë dhe municion.",
+         "Police arrested five people for weapons smuggling near Merdare. Weapons and ammunition were seized.", "merdare_smuggling")
+news("Balkan Wire (demo)", T + 0.5 * H, "Kosovo police arrest five over weapons smuggling near the Merdare crossing.", "",
+     "merdare_smuggling")
+news("Novi Dnevnik (demo)", T + 0.8 * H, "Kosovska policija uhapsila petoricu zbog šverca oružja kod Merdara.",
+     "Kosovo police arrested five over weapons smuggling near Merdare.", "merdare_smuggling")
+organic_wave("merdare_smuggling", T + 0.6 * H, T + 5 * H, 9, [
+    [("Kontrabandë armësh te Merdarja", "Šverc oružja kod Merdara", "Weapons smuggling at Merdare")],
+    [("pesë të arrestuar", "petorica uhapšena", "five arrested"), ("u konfiskua municion", "zaplenjena municija", "ammunition seized")]])
+
+T = START + 27 * H
+news("Novi Dnevnik (demo)", T + 25 * 60, "Eksplozivna naprava bačena na policijsku stanicu u Zvečanu, nema povređenih.",
+     "Explosive device thrown at the police station in Zvecan, no one injured.", "zvecan_attack")
+news("Kosova Times (demo)", T + 40 * 60, "Granatë e hedhur në stacionin policor në Zveçan, nuk ka të plagosur.",
+     "Grenade thrown at the police station in Zvecan, no one wounded.", "zvecan_attack")
+official(POLICE, T + 50 * 60, "Policia konfirmon se një mjet shpërthyes u hodh në stacionin policor në Zveçan. Nuk ka të plagosur.",
+         "Police confirm an explosive device was thrown at the police station in Zvecan. No one was wounded.", "zvecan_attack")
+news("Balkan Wire (demo)", T + 70 * 60, "Explosion at a police station in Zvecan, northern Kosovo; police say no one was hurt.", "",
+     "zvecan_attack")
+organic_wave("zvecan_attack", T + 10 * 60, T + 8 * H, 45, [
+    [("Shpërthim në Zveçan", "Eksplozija u Zvečanu", "Explosion in Zvecan"),
+     ("Granatë e hedhur në stacionin policor në Zveçan", "Bačena bomba na policijsku stanicu u Zvečanu", "Grenade thrown at the police station in Zvecan")],
+    [("nuk ka të plagosur", "nema ranjenih", "no one wounded"), ("policia në vendngjarje", "policija na licu mesta", "police on the scene"),
+     ("u dëgjua një shpërthim i fortë natën", "čula se jaka eksplozija noću", "a loud blast was heard at night")],
+    [("Situata e tensionuar në veri.", "Napeta situacija na severu.", "Tense situation in the north."), ("", "", ""),
+     ("Shpresojmë të kapen autorët.", "Nadamo se da će uhvatiti počinioce.", "Hope they catch who did it.")]])
+
+T = START + 38 * H
+news("Novi Dnevnik (demo)", T, "Beograd podigao borbenu gotovost vojske kod administrativne linije.",
+     "Belgrade raised the combat readiness of the army near the administrative line.", "belgrade_army")
+news("Balkan Wire (demo)", T + 0.5 * H, "Belgrade raises army readiness near the administrative line with Kosovo.", "", "belgrade_army")
+news("Prishtina Daily (demo)", T + 1.0 * H, "Beogradi ngre gatishmërinë e ushtrisë pranë vijës administrative.",
+     "Belgrade raises army readiness near the administrative line.", "belgrade_army")
+organic_wave("belgrade_army", T + 0.2 * H, T + 7 * H, 30, [
+    [("Beogradi ngre gatishmërinë e ushtrisë pranë vijës administrative", "Beograd podigao gotovost vojske kod administrativne linije",
+      "Belgrade raises army readiness near the administrative line"),
+     ("Ushtria e Serbisë në gatishmëri, njofton Beogradi", "Vojska Srbije u pripravnosti, saopštio Beograd", "Serbian army on alert, Belgrade says")],
+    [("pas incidentit në Zveçan", "posle incidenta u Zvečanu", "after the incident in Zvecan"),
+     ("Vuçiq takoi shefin e shtabit", "Vučić se sastao sa načelnikom generalštaba", "Vucic met the chief of staff"), ("", "", "")],
+    [("BE kërkon qetësi.", "EU poziva na smirenost.", "The EU calls for calm."), ("Situata po monitorohet.", "Situacija se prati.",
+     "The situation is being monitored."), ("", "", "")]])
+
 # ------------------------------------------------------------------ write
+with open(OUT / "demo_cyber.json", "w", encoding="utf-8") as f:
+    json.dump(cyber_events, f, ensure_ascii=False, indent=1)
 posts.sort(key=lambda p: p["ts"])
 OUT.mkdir(exist_ok=True)
 with open(OUT / "demo_posts.jsonl", "w", encoding="utf-8") as f:

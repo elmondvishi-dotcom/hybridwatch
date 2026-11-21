@@ -12,6 +12,8 @@ Reports:
   * debunk matching        - post-level precision / recall (and correct fact-check)
   * alerts                 - which narratives alerted, with which type, false alarms
   * early warning          - alert time vs first credible-outlet report
+  * cyber verification     - verdict vs ground truth (confusion matrix), time from claim to verdict
+  * hybrid links           - was each expected cyber <-> narrative link found
 """
 from __future__ import annotations
 
@@ -30,7 +32,10 @@ from sklearn.metrics import adjusted_rand_score  # noqa: E402
 
 from hybridwatch.config import load_config, resolve  # noqa: E402
 from hybridwatch.db import jloads  # noqa: E402
+from hybridwatch.events import EventDetector  # noqa: E402
+from hybridwatch.hybrid import Linker  # noqa: E402
 from hybridwatch.pipeline import Pipeline  # noqa: E402
+from hybridwatch.verify import Verifier, add_event  # noqa: E402
 
 CAMPAIGNS = {"water_poison", "kfor_withdraw", "power_sabotage"}
 
@@ -46,16 +51,22 @@ def fmt_t(ts):
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%d %b %H:%M")
 
 
-def run(cfg: dict, data: Path, step_minutes: int = 5, quiet=False) -> dict:
+def run(cfg: dict, data: Path, step_minutes: int = 5, quiet=False, cyber: Path | None = None) -> dict:
     posts = [json.loads(l) for l in open(data, encoding="utf-8") if l.strip()]
     posts.sort(key=lambda p: p["ts"])
     tmp = Path(tempfile.mkdtemp()) / "eval.db"
     pipe = Pipeline(cfg, db_path=str(tmp), quiet=True)
     pipe.factchecks.refresh_sources([fc for fc in cfg["factcheckers"] if fc.get("type") == "file" and fc.get("enabled")])
+    # cyber claims (with ground truth) are released by the same clock, then verified and linked
+    events = []
+    if cyber and cyber.exists():
+        events = sorted(json.load(open(cyber, encoding="utf-8")), key=lambda e: e["first_seen"])
+    verifier = Verifier(pipe.conn, cfg, log=lambda *a: None)
+    linker = Linker(pipe.conn, cfg, pipe.glossary, pipe.threat)
 
     t0 = time.perf_counter()
-    i, clock = 0, posts[0]["ts"]
-    while i < len(posts):
+    i, j, clock = 0, 0, posts[0]["ts"]
+    while i < len(posts) or j < len(events):
         clock += step_minutes * 60
         batch = []
         while i < len(posts) and posts[i]["ts"] <= clock:
@@ -63,6 +74,13 @@ def run(cfg: dict, data: Path, step_minutes: int = 5, quiet=False) -> dict:
             i += 1
         if batch:
             pipe.process(batch)
+        if events:
+            while j < len(events) and events[j]["first_seen"] <= clock:
+                add_event(pipe.conn, events[j], clock)
+                j += 1
+            verifier.run(clock)
+            linker.run(clock, pipe.alerts)
+    EventDetector(pipe.conn, cfg, pipe.threat).run(clock, force=True)
     elapsed = time.perf_counter() - t0
     conn = pipe.conn
 
@@ -158,18 +176,73 @@ def run(cfg: dict, data: Path, step_minutes: int = 5, quiet=False) -> dict:
         if grp and not any(r["gt_coordinated"] for r in grp):
             false.append(Counter(r["gt_narrative"] for r in grp).most_common(1)[0][0])
     res["false_coordination_alerts"] = sorted(false)
+
+    # ---- cyber verification vs ground truth ----
+    if events:
+        # an alert "contains" a true narrative if it holds at least half of that narrative's posts
+        # (a campaign can be merged into the story it distorts, e.g. power_sabotage into power_outage)
+        gt_size = Counter(r["gt_narrative"] for r in rows)
+        nar_of_alert = {}
+        for a in conn.execute("SELECT id, narrative_id FROM alerts"):
+            c = Counter(r["gt_narrative"] for r in rows if r["narrative_id"] == a["narrative_id"])
+            nar_of_alert[a["id"]] = sorted(g for g, n in c.items()
+                                           if g != "noise" and gt_size[g] >= 5 and n >= 0.5 * gt_size[g])
+        cy = []
+        for e in conn.execute("SELECT * FROM cyber_events ORDER BY claimed_at"):
+            raw = jloads(e["raw"], {})
+            linked = sorted({g for h in conn.execute("SELECT alert_id FROM hybrid_links WHERE cyber_event_id=?", (e["id"],))
+                             for g in nar_of_alert.get(h["alert_id"], [])})
+            cy.append({"id": e["id"], "kind": e["kind"], "title": e["title"], "gt": raw.get("gt_status"),
+                       "status": e["status"], "admiralty": f"{e['source_reliability']}{e['info_credibility']}",
+                       "verdict_min": (e["verdict_at"] - e["claimed_at"]) / 60 if e["verdict_at"] else None,
+                       "gt_hybrid": raw.get("gt_hybrid"), "linked_to": linked})
+        res["cyber"] = cy
+    # ---- events: category and place per true story ----
+    gt_of_post = {r["id"]: r["gt_narrative"] for r in rows}
+    gt_posts = Counter(gt_of_post.values())
+    evs = [dict(e) | {"posts": jloads(e["post_ids"], [])} for e in conn.execute("SELECT * FROM events")]
+    ev_res = []
+    for g, (cat, place) in EXPECTED_EVENTS.items():
+        if not gt_posts.get(g):
+            continue
+        cover = [e for e in evs if sum(gt_of_post.get(p) == g for p in e["posts"]) >= 0.3 * gt_posts[g]]
+        hit = [e for e in cover if e["category"] == cat]
+        # a non-threat story is wrong only if an event is mainly made of it (a few posts clustered into a
+        # real event do not make it a threat event)
+        major = [e for e in cover if Counter(gt_of_post.get(p) for p in e["posts"]).most_common(1)[0][0] == g]
+        if not cat:
+            cover = major
+        ev_res.append({"gt": g, "expected": cat, "place": place, "found": bool(hit) if cat else not cover,
+                       "got": sorted({e["category"] for e in cover}),
+                       "got_place": hit[0]["place"] if hit else None,
+                       "place_ok": (not place) or bool(hit and hit[0]["place"] == place)})
+    res["events"] = ev_res
+    res["events_total"] = len(evs)
     res["db"] = str(tmp)
     return res
+
+
+# true story -> (expected event category, expected place); None = should NOT become a threat event
+EXPECTED_EVENTS = {
+    "power_outage": ("infrastructure", "Pristina"), "snow_roads": ("infrastructure", None),
+    "water_poison": ("disinformation", None), "kfor_withdraw": ("disinformation", None),
+    "power_sabotage": ("disinformation", None), "euro_freeze": ("disinformation", None),
+    "jarinje_protest": ("organized_activity", "Jarinje crossing"), "merdare_smuggling": ("organized_activity", "Merdare crossing"),
+    "zvecan_attack": ("security_incident", "Zvečan"), "belgrade_army": ("regional", "Belgrade (Serbia)"),
+    "football": (None, None), "energy_prices": (None, None),
+}
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=None)
+    ap.add_argument("--cyber", default=None, help="cyber events JSON with gt_status (default: data/demo_cyber.json)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
     cfg = load_config()
     data = Path(args.data) if args.data else resolve(cfg, cfg["replay"]["file"])
-    r = run(cfg, data)
+    cyber = Path(args.cyber) if args.cyber else (None if args.data else resolve(cfg, "data/demo_cyber.json"))
+    r = run(cfg, data, cyber=cyber)
     if args.json:
         print(json.dumps(r, indent=1, default=str))
         return
@@ -196,6 +269,43 @@ def main():
               f"truth={a['gt']:14s} purity {a['purity']:.2f}{early}")
     print(f"\n  campaigns caught: {r['campaigns_caught']}   missed: {r['campaigns_missed']}")
     print(f"  coordination alerts on organic narratives (false alarms): {r['false_coordination_alerts'] or 'none'}")
+    if r.get("cyber"):
+        print_cyber(r["cyber"])
+    if r.get("events"):
+        print(f"\nEVENTS (category and place per true story; {r['events_total']} events detected)")
+        for e in r["events"]:
+            exp = e["expected"] or "no threat event"
+            mark = "ok " if e["found"] and e["place_ok"] else "XX "
+            where = f"  place {e['got_place']}" + ("" if e["place_ok"] else f" (expected {e['place']})") if e["expected"] else ""
+            print(f"  {mark}{e['gt']:18s} expected {exp:21s} got {', '.join(e['got']) or 'nothing':32s}{where}")
+        n = len(r["events"])
+        print(f"  category correct {sum(e['found'] for e in r['events'])}/{n}   "
+              f"place correct {sum(e['found'] and e['place_ok'] for e in r['events'])}/{n}")
+
+
+def print_cyber(cy: list[dict]) -> None:
+    st = ["confirmed", "partly_confirmed", "refuted", "unverified"]
+    print("\nCYBER CLAIM VERIFICATION")
+    for e in cy:
+        ok = "ok " if e["status"] == e["gt"] else "XX "
+        t = f"verdict after {e['verdict_min']:.0f} min" if e["verdict_min"] is not None else "no verdict"
+        print(f"  {ok}#{e['id']} {e['kind']:17s} truth={e['gt']:10s} got={e['status']:17s} {e['admiralty']}  {t:22s} {e['title']}")
+    print("\n  confusion matrix (rows = truth, columns = verdict)")
+    print("  " + " " * 17 + "".join(f"{s[:9]:>11s}" for s in st))
+    for g in st:
+        if any(e["gt"] == g for e in cy):
+            print(f"  {g:17s}" + "".join(f"{sum(1 for e in cy if e['gt'] == g and e['status'] == s):>11d}" for s in st))
+    acc = sum(e["status"] == e["gt"] for e in cy) / len(cy)
+    times = sorted(e["verdict_min"] for e in cy if e["verdict_min"] is not None)
+    print(f"  accuracy {acc:.2f}" + (f"   median time claim -> verdict {times[len(times) // 2]:.0f} min" if times else ""))
+    print("\nHYBRID LINKS (cyber event -> disinformation narrative)")
+    for e in cy:
+        if e["gt_hybrid"] or e["linked_to"]:
+            found = e["gt_hybrid"] in e["linked_to"]
+            print(f"  #{e['id']} {e['title']}: expected link to {e['gt_hybrid']} -> {'FOUND' if found else 'MISSED'}"
+                  f"  (linked alert holds: {', '.join(e['linked_to']) or 'nothing'})")
+    extra = ", ".join("#" + str(e["id"]) for e in cy if e["linked_to"] and not e["gt_hybrid"])
+    print(f"  links on events that should have none: {extra or 'none'}")
 
 
 if __name__ == "__main__":

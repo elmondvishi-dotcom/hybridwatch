@@ -38,8 +38,16 @@ class ReplayCollector:
 
     def sim_clock(self) -> float:
         if self.speed <= 0:
-            return float("inf")
+            # backlog mode: release the data in 15-minute slices (the worker does not wait between slices), so
+            # alert times stay realistic instead of jumping to the end of a big batch
+            nxt = self.posts[self.state["offset"]]["ts"] if not self.done else float("inf")
+            return nxt + 15 * 60
         return self.state["sim_start"] + (time.time() - self.state["wall_start"]) * self.speed
+
+    @property
+    def backlog(self) -> bool:
+        """More data is already due: the worker should poll again right away."""
+        return not self.done and self.posts[self.state["offset"]]["ts"] <= self.sim_clock()
 
     def poll(self) -> list[dict]:
         clock = self.sim_clock()

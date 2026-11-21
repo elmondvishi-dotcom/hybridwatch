@@ -108,3 +108,21 @@ class Glossary:
             if c:
                 out.append(c)
         return out
+
+
+_SENTENCES = re.compile(r"(?<=[.!?])\s+")
+
+
+def english_part(text: str) -> str | None:
+    """Leading English sentences of a multilingual text ("Claim that X. Uji ... . Voda ...")."""
+    out = []
+    for s in _SENTENCES.split((text or "").strip()):
+        if has_cyrillic(s) or detect_language(s) != "en":
+            break
+        out.append(s)
+    return " ".join(out).rstrip(". ") or None
+
+
+def shorten(text: str, n: int = 140) -> str:
+    text = " ".join((text or "").split())
+    return text if len(text) <= n else text[:n].rsplit(" ", 1)[0] + "…"

@@ -63,6 +63,53 @@ CREATE TABLE IF NOT EXISTS factchecks (
 
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 
+-- Cyber events are CLAIMS until verification checks support or contradict them.
+CREATE TABLE IF NOT EXISTS cyber_events (
+    id INTEGER PRIMARY KEY,
+    ext_id TEXT UNIQUE,                 -- collector id, so re-polling never duplicates an event
+    kind TEXT,                          -- ddos_claim | ransomware_claim | defacement | data_breach_claim | outage | vulnerability
+    title TEXT, target TEXT, sector TEXT, claimed_actor TEXT,
+    source_name TEXT, source_type TEXT, source_url TEXT,
+    claimed_at REAL, first_seen REAL,
+    status TEXT DEFAULT 'unverified',   -- unverified | partly_confirmed | confirmed | refuted
+    source_reliability TEXT,            -- Admiralty A-F (from the source type)
+    info_credibility INTEGER,           -- Admiralty 1-6 (from the checks)
+    confidence REAL,                    -- 0-1, derived from both
+    severity TEXT,                      -- low | medium | high | critical (+1 when linked to a narrative)
+    checked_at REAL,                   -- data time of the last verification run
+    verdict_at REAL,                    -- data time the status first became confirmed / refuted
+    raw TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_cyber_time ON cyber_events(claimed_at);
+
+CREATE TABLE IF NOT EXISTS verification_checks (
+    id INTEGER PRIMARY KEY,
+    event_id INTEGER, check_name TEXT,
+    result TEXT,                        -- supports | contradicts | inconclusive | error
+    detail TEXT, evidence_url TEXT, checked_at REAL,
+    origin TEXT                         -- live | recorded | own_data
+);
+CREATE INDEX IF NOT EXISTS ix_checks_event ON verification_checks(event_id, checked_at);
+
+-- Events: what happened, where, how sure (hybridwatch/events.py). Recomputed from narratives.
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY,
+    key TEXT UNIQUE,                    -- category|place|anchor narrative|part: stable across recomputations
+    category TEXT, title TEXT, place TEXT, lat REAL, lon REAL,
+    narrative_ids TEXT, alert_ids TEXT, part TEXT, post_ids TEXT,
+    first_ts REAL, last_ts REAL, first_credible_ts REAL, first_official_ts REAL,
+    n_posts INTEGER, n_sources INTEGER, n_credible INTEGER, n_official INTEGER, langs TEXT,
+    severity TEXT, reliability TEXT, credibility INTEGER, confidence REAL,
+    status TEXT, indicators TEXT, updated_at REAL
+);
+CREATE INDEX IF NOT EXISTS ix_events_time ON events(last_ts);
+
+CREATE TABLE IF NOT EXISTS hybrid_links (
+    id INTEGER PRIMARY KEY,
+    cyber_event_id INTEGER, alert_id INTEGER, reason TEXT, score REAL,
+    UNIQUE(cyber_event_id, alert_id)
+);
+
 CREATE TABLE IF NOT EXISTS metrics (
     id INTEGER PRIMARY KEY,
     wall_ts REAL, sim_ts REAL, n_posts INTEGER, seconds REAL, n_alerts INTEGER
@@ -78,6 +125,11 @@ MIGRATIONS = [
     ("decisions", "undone", "INTEGER DEFAULT 0"),
     ("narratives", "tags", "TEXT"),            # top concept tags, shown as chips under the title
     ("narratives", "en_post_id", "INTEGER"),   # most central English post -> readable title
+    ("cyber_events", "severity", "TEXT"),
+    # threat model (threat.py): score 0-100 and its explanation (factors, why, why not higher, boundaries)
+    ("alerts", "score", "REAL"), ("alerts", "threat", "TEXT"),
+    ("events", "score", "REAL"), ("events", "threat", "TEXT"),
+    ("cyber_events", "score", "REAL"), ("cyber_events", "threat", "TEXT"),
 ]
 
 

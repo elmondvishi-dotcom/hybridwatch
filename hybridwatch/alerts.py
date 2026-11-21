@@ -16,6 +16,8 @@ from collections import Counter
 
 from . import signals as S
 from .db import get_setting, jloads
+from .hybrid import links_for_alert
+from .threat import ThreatModel
 from .text import Glossary, normalize
 
 TARGETS = {
@@ -38,11 +40,36 @@ AIMS = {
 
 
 class AlertManager:
-    def __init__(self, conn: sqlite3.Connection, cfg: dict, glossary: Glossary):
+    def __init__(self, conn: sqlite3.Connection, cfg: dict, glossary: Glossary, threat: ThreatModel | None = None):
         self.conn = conn
         self.th = cfg["thresholds"]
-        self.sensitive = {normalize(w) for w in cfg.get("sensitive_targets", [])}
         self.glossary = glossary
+        self.threat = threat or ThreatModel(cfg)
+
+    def _assess(self, nid: int, sig: dict, st: dict, links: list, conf: float) -> dict:
+        """Threat score for a narrative (threat.py): target, scale, hostility, credibility, escalation."""
+        posts = [dict(r) for r in self.conn.execute(
+            "SELECT id, text, translation, author, lang, source, source_type, credibility FROM posts "
+            "WHERE narrative_id=? ORDER BY ts DESC LIMIT 400", (nid,))]
+        focus = (get_setting(self.conn, "focus", {}) or {}).get("keywords", [])
+        return self.threat.assess(posts, sig, st, links=links, key=nid, detection_conf=conf, focus=focus)
+
+    def rescore_all(self, now_sim: float) -> int:
+        """Recompute score and level of every alert (e.g. at startup, after the model changed).
+        Only score / level / explanation change: status, unread, bumps and dismissals stay as they are."""
+        n = 0
+        for row in self.conn.execute("SELECT * FROM alerts WHERE status!='merged'").fetchall():
+            st = S.narrative_stats(self.conn, row["narrative_id"], now_sim, self.th)
+            sig = jloads(row["signals"], {}) or {}
+            res = self._assess(row["narrative_id"], sig, st, links_for_alert(self.conn, row["id"]), S.confidence(sig))
+            self.conn.execute("UPDATE alerts SET severity=?, score=?, threat=? WHERE id=?",
+                              (res["level"], res["score"], json.dumps(res), row["id"]))
+            n += 1
+        # merged alerts are hidden and not rescored: just translate an old severity name to its level
+        self.conn.execute("UPDATE alerts SET severity = CASE severity WHEN 'low' THEN 'info' WHEN 'medium' THEN 'watch' "
+                          "WHEN 'high' THEN 'threat' ELSE severity END WHERE severity IN ('low','medium','high')")
+        self.conn.commit()
+        return n
 
     # ------------------------------------------------------------------
     def update(self, nid: int, now_sim: float) -> str | None:
@@ -52,20 +79,23 @@ class AlertManager:
         row = self.conn.execute("SELECT * FROM alerts WHERE narrative_id=?", (nid,)).fetchone()
         if not sig_now and row is None:
             return None
+        # hybrid threat: linked cyber events (see hybrid.py)
+        links = links_for_alert(self.conn, row["id"]) if row else []
+        if links:
+            sig_now["hybrid"] = {"events": [x["event_id"] for x in links], "reason": links[0]["reason"],
+                                 "count": len(links), "score": links[0]["score"]}
 
         # signals accumulate: once a narrative showed coordination, that stays on its record
         sig = dict(jloads(row["signals"], {})) if row else {}
         sig.update(sig_now)
+        if "hybrid" in sig and "hybrid" not in sig_now:   # its cyber event was refuted -> link removed
+            sig.pop("hybrid")
         if "trending" in sig and "trending" not in sig_now:
             sig["trending"]["active"] = False
 
         texts = [r["text"] for r in self.conn.execute(
             "SELECT text FROM posts WHERE narrative_id=? ORDER BY followers DESC LIMIT 60", (nid,))]
         concepts = Counter(c for t in texts for c in set(self.glossary.concepts(normalize(t))))
-        words = Counter(w for t in texts for w in set(normalize(t).split()))
-        focus = get_setting(self.conn, "focus", {}) or {}
-        watch = self.sensitive | {normalize(k) for k in focus.get("keywords", [])}
-        hits = sum(1 for w in watch if words.get(w, 0) >= 3 or concepts.get(w, 0) >= 3)
 
         fc = None
         if "debunk_match" in sig:
@@ -74,26 +104,29 @@ class AlertManager:
             fc = dict(fc) if fc else None
         atype = S.alert_type(sig)
         conf = S.confidence(sig)
-        sev = S.severity(sig, st, hits)
+        res = self._assess(nid, sig, st, links, conf)     # level replaces the old severity (hybrid +1 inside)
+        sev = res["level"]
         why = S.reasons(sig, st, fc)
         suggestion = self.suggest(nid, sig, st, sev, conf, concepts, fc)
+        suggestion["severity"]["reason"] = f"Threat score {res['score']:.0f}/100 ({', '.join(res['why'][:2]) or 'no strong factor'})"
         stats = {k: v for k, v in st.items() if k not in ("coord_post_ids", "coord_authors")}
         wall = time.time()
 
         if row is None:
             self.conn.execute(
                 "INSERT INTO alerts(narrative_id, status, type, severity, confidence, signals, reasons, stats, "
-                "created_at, created_sim, bumped_at, bumped_sim, posts_at_bump, unread, suggestion, history) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)",
+                "created_at, created_sim, bumped_at, bumped_sim, posts_at_bump, unread, suggestion, score, threat, history) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)",
                 (nid, "new", atype, sev, conf, json.dumps(sig), json.dumps(why), json.dumps(stats),
-                 wall, now_sim, wall, now_sim, st["size"], json.dumps(suggestion),
+                 wall, now_sim, wall, now_sim, st["size"], json.dumps(suggestion), res["score"], json.dumps(res),
                  json.dumps([{"t": wall, "sim": now_sim, "event": f"Flagged by system ({atype})"}])))
             return "created"
 
         old_sig = set(jloads(row["signals"], {}).keys())
         new_kinds = set(sig_now) - old_sig
         grew = st["size"] >= (row["posts_at_bump"] or 1) * self.th["bump_growth"]
-        sev_up = S.SEVERITY.index(sev) > S.SEVERITY.index(row["severity"] or "low")
+        old = row["severity"] if row["severity"] in S.SEVERITY else "info"
+        sev_up = S.SEVERITY.index(sev) > S.SEVERITY.index(old)
         history = jloads(row["history"], [])
         status, unread, prev_dismissed = row["status"], row["unread"], row["previously_dismissed"]
         bump = False
@@ -119,7 +152,7 @@ class AlertManager:
                 if grew:
                     change.append(f"grew to {st['size']} posts")
                 if sev_up:
-                    change.append(f"severity {row['severity']} -> {sev}")
+                    change.append(f"level {old} -> {sev}")
                 history.append({"t": wall, "sim": now_sim, "event": "Updated: " + "; ".join(change)})
         # confirmed / merged alerts: stats keep updating silently
 
@@ -131,10 +164,10 @@ class AlertManager:
 
         self.conn.execute(
             "UPDATE alerts SET status=?, type=?, severity=?, confidence=?, signals=?, reasons=?, stats=?, "
-            "suggestion=?, history=?, previously_dismissed=?, unread=?, "
+            "suggestion=?, score=?, threat=?, history=?, previously_dismissed=?, unread=?, "
             "bumped_at=?, bumped_sim=?, posts_at_bump=? WHERE id=?",
             (status, atype, sev, conf, json.dumps(sig), json.dumps(why), json.dumps(stats),
-             json.dumps(suggestion), json.dumps(history), prev_dismissed, 1 if bump else unread,
+             json.dumps(suggestion), res["score"], json.dumps(res), json.dumps(history), prev_dismissed, 1 if bump else unread,
              wall if bump else row["bumped_at"], now_sim if bump else row["bumped_sim"],
              st["size"] if bump else row["posts_at_bump"], row["id"]))
         return result
@@ -172,6 +205,9 @@ class AlertManager:
         if "debunk_match" in sig:
             tech.append({"tag": "Recycling a previously debunked claim",
                          "reason": f"matches {fc['source'] if fc else 'fact-check'}"})
+        if "hybrid" in sig:
+            tech.append({"tag": "Cyber incident exploited for an information operation",
+                         "reason": sig["hybrid"]["reason"]})
         if len(st.get("langs", {})) >= 2:
             tech.append({"tag": "Multilingual targeting", "reason": ", ".join(st["langs"].keys())})
         if len(st.get("source_types", {})) >= 3:
@@ -200,7 +236,7 @@ class AlertManager:
         sug["actor"] = actor
         sug["reach"] = f(st.get("reach", 0), "Sum of followers of posting accounts")
         sug["recommended_action"] = f(
-            "Escalate" if sev in ("high", "critical") and "coordination" in sig else
+            "Escalate" if sev in ("threat", "critical") and "coordination" in sig else
             "Monitor" if "trending" in sig and len(sig) == 1 else "Review",
             "Based on severity and signals")
 

@@ -15,6 +15,7 @@ from collections import Counter
 import numpy as np
 
 from .alerts import AlertManager
+from .threat import ThreatModel
 from .clustering import OnlineClusterer
 from .db import connect, get_setting, set_setting
 from .config import resolve
@@ -39,7 +40,8 @@ class Pipeline:
         self.dup_of: dict[int, int] = {}
         self.clusterer = OnlineClusterer(self.embedder.dim, self.th["cluster_similarity"])
         self.factchecks = FactCheckLibrary(self.conn, self.embedder, self.llm, cfg)
-        self.alerts = AlertManager(self.conn, cfg, self.glossary)
+        self.threat = ThreatModel(cfg, self.llm, log=self.log)
+        self.alerts = AlertManager(self.conn, cfg, self.glossary, self.threat)
         self.now = get_setting(self.conn, "sim_now", 0.0) or 0.0
         self.batches = 0
         self._restore()
@@ -162,6 +164,7 @@ class Pipeline:
 
         # alerts for every narrative that received posts (plus open alerts, whose trend can cool down)
         results = Counter()
+        self.threat.new_cycle()
         # a big backlog batch can span many hours: look for spikes across the whole batch
         span_h = (posts[-1]["ts"] - posts[0]["ts"]) / 3600 + 1
         self.alerts.th = {**self.th, "trend_lookback_hours": max(self.th.get("trend_lookback_hours", 6), span_h)}

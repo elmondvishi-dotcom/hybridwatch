@@ -3,18 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HybridWatch — analyst console</title>
+<title>HybridWatch — Kosovo security OSINT</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1720'/%3E%3Cellipse cx='16' cy='16' rx='12' ry='7' fill='%23e2e8f0'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%232563eb'/%3E%3Ccircle cx='25' cy='7' r='3.5' fill='%23ef4444'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="/static/style.css?v=b1">
 </head>
 <body>
+<div class="app">
+<aside class="side">
+  <div class="logo">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#16202c"/>
+      <ellipse cx="16" cy="16" rx="11" ry="6.5" fill="#e2e8f0"/><circle cx="16" cy="16" r="4.6" fill="#2563eb"/>
+      <circle cx="16" cy="16" r="2" fill="#0f1720"/><circle cx="25" cy="7" r="3.4" fill="#ef4444"/></svg>
+    <div><div class="name">HybridWatch</div><div class="tag-line">Kosovo security OSINT</div></div>
+  </div>
+  <div class="nav-group">Overview</div>
+  <button data-view="overview" class="nav active"><span class="ic">▦</span><span class="nl">Overview</span></button>
+  <button data-view="situation" class="nav"><span class="ic">◎</span><span class="nl">Situation</span></button>
+  <button data-view="events" class="nav"><span class="ic">◆</span><span class="nl">Events</span><span class="nb" id="nb-events"></span></button>
+  <div class="nav-group">Analysis</div>
+  <button data-view="alerts" class="nav"><span class="ic">❝</span><span class="nl">Information threats</span><span class="nb" id="nb-alerts"></span></button>
+  <button data-view="cyber" class="nav"><span class="ic">⌁</span><span class="nl">Cyber</span><span class="nb" id="nb-cyber"></span></button>
+  <div class="nav-group">System</div>
+  <button data-view="activity" class="nav"><span class="ic">▤</span><span class="nl">Activity</span></button>
+  <button data-view="settings" class="nav"><span class="ic">⚙</span><span class="nl">Settings</span></button>
+  <div class="side-foot">Public sources only.<br>Every finding links to its evidence.<br>The analyst decides.</div>
+</aside>
+
+<div class="shell">
 <header class="top">
-  <div class="brand">HybridWatch <span class="sub">Detects coordinated disinformation campaigns</span></div>
-  <nav>
-    <button data-view="alerts" class="nav active">Alerts</button>
-    <button data-view="activity" class="nav">Activity</button>
-    <button data-view="settings" class="nav">Settings</button>
-  </nav>
+  <div class="crumb"><span id="crumb">Overview</span><span class="crumb-sub" id="crumb-sub"></span></div>
   <div class="live">
     <span id="clock" class="muted"></span>
     <button id="pending" class="pending hidden"></button>
@@ -24,14 +43,100 @@
 </header>
 
 <main>
-  <!-- ALERTS -->
-  <section id="view-alerts" class="view">
+  <!-- OVERVIEW: highest current level, counters, map, category x level, 7 days, top 5 (overview.js) -->
+  <section id="view-overview" class="view">
+    <div class="page wide ov2">
+      <div class="ov2-head"><h2>Overview — Kosovo</h2><div class="muted small-n" id="ov-sub"></div></div>
+      <div id="ov-paused" class="ov-paused hidden"></div>
+      <div id="ov-banner"></div>
+      <div class="ov-counters" id="ov-counters"></div>
+      <div class="ov2-grid">
+        <div class="card">
+          <div class="ch-t">Where: active alerts by municipality (last 24 h)</div>
+          <div class="ch-s">Place detected from the posts (Albanian and Serbian names, Latin and Cyrillic). An alert can name more than one municipality.</div>
+          <div class="ov-mapwrap"><div id="ov-map" class="chart-box"></div><div id="ov-unloc" class="ov-unloc"></div></div>
+          <div class="legend" id="ov-map-legend"></div>
+          <div class="attrib">Boundaries: <a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">geoBoundaries</a>,
+            © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, CC BY-SA 2.0 (bundled, works offline)</div>
+        </div>
+        <div class="card">
+          <div class="ch-t">Top 5 now: highest threat scores</div>
+          <div class="ch-s">Alerts at Watch or above with posts in the last 24 h. Trend = posts in the last hour vs the normal rate.</div>
+          <div id="ov-top"></div>
+        </div>
+      </div>
+      <div class="ov2-grid b">
+        <div class="card">
+          <div class="ch-t">Alerts by category and level (last 24 h)</div>
+          <div class="ch-s">Count of active alerts. Darker cell = more alerts. An alert can be in more than one category. Click a cell to open them.</div>
+          <div id="ov-matrix"></div>
+        </div>
+        <div class="card">
+          <div class="ch-t">Last 7 days: posts in detected events per day, by category</div>
+          <div class="ch-s">Cyber incidents are not post-based: they appear as hybrid-link markers. Markers show when an alert reached Critical.</div>
+          <div id="ov-week" class="chart-box"></div>
+          <div class="legend" id="ov-week-legend"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SITUATION: the picture for decision makers -->
+  <section id="view-situation" class="view hidden">
+    <div class="page wide" id="sit">
+      <div class="sit-head">
+        <div><h2>Situation picture — Kosovo</h2><div class="muted" id="sit-sub"></div></div>
+        <div class="seg" id="sit-window">
+          <button data-h="24">24 h</button><button data-h="48" class="on">48 h</button><button data-h="168">7 days</button>
+        </div>
+      </div>
+      <div class="kpis" id="sit-kpis"></div>
+      <div class="sit-grid">
+        <div class="card map-card"><div class="card-h">Where<span class="muted small" id="map-note"></span></div><div id="map"></div>
+          <div class="legend" id="map-legend"></div></div>
+        <div class="card"><div class="card-h">Priority events</div><div id="sit-priority"></div></div>
+      </div>
+      <div class="sit-grid two">
+        <div class="card"><div class="card-h">Situation brief <button class="btn small-btn" id="brief-copy">Copy</button></div>
+          <div id="sit-brief" class="brief"></div>
+          <div class="muted small">Generated from the events listed here. Every line can be traced to an event and its sources.</div></div>
+        <div class="card"><div class="card-h">Timeline by category</div><div id="sit-lanes"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVENTS: what happened, where, how sure -->
+  <section id="view-events" class="view hidden">
+    <div class="list-pane">
+      <div class="folders cats" id="ev-folders"></div>
+      <div id="ev-list" class="list"></div>
+    </div>
+    <div class="detail-pane" id="ev-detail">
+      <div class="empty">Select an event to see what we know, the evidence and the context.</div>
+    </div>
+  </section>
+
+  <!-- ALERTS (information threats) -->
+  <section id="view-alerts" class="view hidden">
     <div class="list-pane">
       <div class="folders" id="folders"></div>
+      <div id="filterbar" class="filterbar hidden"></div>
       <div id="list" class="list"></div>
     </div>
     <div class="detail-pane" id="detail">
       <div class="empty">Loading overview…</div>
+    </div>
+  </section>
+
+  <!-- CYBER: every event is a claim until checks support or contradict it -->
+  <section id="view-cyber" class="view hidden">
+    <div class="list-pane">
+      <div class="folders" id="cy-folders"></div>
+      <div id="cy-filterbar" class="filterbar hidden"></div>
+      <div id="cy-list" class="list"></div>
+    </div>
+    <div class="detail-pane" id="cy-detail">
+      <div class="empty">Select a cyber event to see how it was verified.</div>
     </div>
   </section>
 
@@ -61,6 +166,23 @@
         <select id="src-cred"><option>credible</option><option selected>unknown</option><option>low</option></select>
         <button class="btn" id="src-add">Add source</button>
       </div>
+      <h3>Cyber sources</h3>
+      <p class="muted small">Public data only: no leaked data is downloaded, no leak site is visited, no target is scanned.
+        Live verification checks (homepage GET, IODA, CISA KEV) are switched on in config.yaml (<code>cyber.live_checks</code>).</p>
+      <div id="set-cyber"></div>
+      <div class="addrow">
+        <input id="cy-name" placeholder="Name">
+        <select id="cy-type">
+          <option value="ransomware_live">Ransomware.live (victims in Kosovo)</option>
+          <option value="ioda">IODA (internet outages)</option>
+          <option value="kev">CISA KEV (exploited vulnerabilities)</option>
+          <option value="cert_rss">CERT announcements (RSS)</option>
+          <option value="telegram">Public Telegram channel</option>
+          <option value="replay">Replay file</option>
+        </select>
+        <input id="cy-url" placeholder="Country code, ASN, feed URL, channel name or file" class="grow">
+        <button class="btn" id="cy-add">Add cyber source</button>
+      </div>
       <h3>Focus &amp; filters</h3>
       <label class="muted">Keywords (comma separated) — raise priority of matching alerts</label>
       <input id="set-keywords" class="wide">
@@ -78,8 +200,12 @@
     </div>
   </section>
 </main>
+</div>
+</div>
 
 <div id="toast" class="toast hidden"></div>
-<script src="/static/app.js"></script>
+<script src="/static/charts.js?v=b1"></script>
+<script src="/static/app.js?v=b1"></script>
+<script src="/static/overview.js?v=b1"></script>
 </body>
 </html>

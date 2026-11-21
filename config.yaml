@@ -27,6 +27,37 @@ replay:
   file: data/demo_posts.jsonl
   speed: 400               # simulated seconds per real second (48h of data ~ 7 min)
 
+# Cyber module: every cyber event is a claim until checks support or contradict it (hybridwatch/verify.py)
+cyber:
+  live_checks: false            # true = homepage GET, IODA and CISA KEV lookups. Off for the demo (no network calls)
+  recheck_minutes: 30           # re-check unverified / partly confirmed claims this often...
+  recheck_hours: 48             # ...for this long after they were first seen
+  http_timeout: 10
+  availability_min_interval_minutes: 10   # at most one GET per host in this interval. A single GET, never a scan
+  ioda_api: https://api.ioda.inetintel.cc.gatech.edu/v2
+  kev_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+  watch_products: [fortinet, fortios, ivanti, citrix, netscaler, microsoft exchange, sharepoint, cisco, palo alto, moveit, vmware]
+  kosovo_domains: [.rks-gov.net, .xk, .gov.rks]
+  kosovo_terms: [kosovo, kosova, kosove, prishtin, pristin, mitrovic, prizren, peja, gjakov, ferizaj, gjilan]
+  # cyber sources: seeded into the database on first run, then edited in Settings (hybridwatch/cyber_collectors.py)
+  # Live sources are off: enable them in Settings. Public data only; one GET per poll; leak-site links are dropped.
+  sources:
+    - {name: "Demo cyber scenario (synthetic)", type: replay, url: "data/demo_cyber.json", enabled: true}
+    - {name: "Ransomware.live: victims in Kosovo", type: ransomware_live, url: "XK", enabled: false}      # or "search:kosovo"
+    - {name: "Ransomware.live: keyword kosovo", type: ransomware_live, url: "search:kosovo", enabled: false}
+    - {name: "IODA: internet outages in Kosovo", type: ioda, url: "country:XK", enabled: false}          # add "asn:<n>" entries
+    - {name: "CISA KEV: watched products", type: kev, url: "", enabled: false}
+    - {name: "KOS-CERT announcements", type: cert_rss, url: "", enabled: false}                         # set the RSS / page URL
+    - {name: "GovCERT XK announcements", type: cert_rss, url: "", enabled: false}
+    - {name: "Telegram channel (hacktivist claims)", type: telegram, url: "", enabled: false}            # channel name
+  ransomware_live_api: https://api.ransomware.live/v2
+  lookback_days: 30             # ransomware listings older than this are not imported
+  kev_lookback_days: 14         # KEV entries added in the last N days
+  # hybrid linking (hybridwatch/hybrid.py): cyber event <-> disinformation alert
+  link_window_hours: 24         # narrative must be active within this window after the event
+  link_min_score: 0.5
+  link_min_posts: 5
+
 thresholds:
   cluster_similarity: 0.30     # cosine similarity to join an existing narrative
   merge_similarity: 0.45       # periodic merge of narratives that drifted together
@@ -47,9 +78,147 @@ thresholds:
   dismissal_expiry_hours: 72   # extra caution after a dismissal fades after this
   lsh_window_hours: 24
 
-# Words that raise severity when a narrative targets them
-sensitive_targets: [kfor, eulex, election, zgjedhje, izbori, police, policia, policija,
-                    community, komuniteti, zajednica, water, uje, voda, bank, banka, mitrovica]
+# ---------------- what is a threat (hybridwatch/threat.py) ----------------
+# A case becomes a threat only if it touches something SENSITIVE (a weighted target below) AND shows a
+# HOSTILE, organised or damaging signal. A sensitive topic without a hostile signal is information; a
+# hostile-looking signal about something unimportant is noise. We track behaviour, never opinions.
+#
+# Word stems are normalised (lower case, no diacritics, Cyrillic -> Latin), so a Latin stem also matches the
+# Serbian Cyrillic spelling; Cyrillic forms are listed too for readability. A stem matches a word that starts
+# with it; a stem ending in '$' must match the whole word; a stem with a space is a phrase.
+#   keywords  what the story is about           (needs: it must ALSO mention one of these)
+#   hostile   behaviour that makes it hostile    (violence, attack, call to block, ...)
+#   benign    the "not a threat" side            (maintenance, weather, peaceful, routine ...)
+threat_categories:
+  disinformation:
+    label: Disinformation
+    not_threat: "Criticism of the government, political opinion and isolated errors are not threats."
+    keywords: [lajm i rreme, lajme te rreme, dezinform, propagand, lazna vest, lazne vesti, лажна вест, dezinformacij,
+               fake news, disinformation, hoax, panik, panic, urgjent, hitno, хитно, shperndaje, podelite, поделите]
+    hostile: []          # hostility comes from the signals: coordination, new accounts, debunked claim
+    benign: [kritik, kritikuj, criticis, mendim, misljenj, opinion]
+  cyber:
+    label: Cyber
+    not_threat: "Unverified hacker claims are shown as 'Unverified claim'; vulnerabilities in products not used in Kosovo are not threats."
+    keywords: [sulm kibernetik, kibernet, sajber, сајбер, cyber, haker, hacker, хакер, hakov, hakuar, ddos, ransomware,
+               ransom, rrjedhj, curenj, цурењ, leak, phishing, malware]
+    hostile: [ddos, ransomware, hakuar, hakovan, hacked, rrezuam, srusili, oboren, leak, rrjedhj, curenj, deface]
+    benign: [trajnim, obuk, training, konferenc, conference, webinar]
+  infrastructure:
+    label: Infrastructure
+    not_threat: "Planned maintenance, small local faults and weather closures are not threats."
+    keywords: [nderpre, nderprer, nestan, nestal, prekid, outage, blackout, defekt, kvar, damage, demtim, ostecen, cut$,
+               closed, mbyll, zatvor, bllokuar, blokiran, blocked, pa rrym, ra rrym, pa energji, nema struj, без струје,
+               bez struj, no power, without power, without electric, went out]
+    needs: [rrym, energji, struj, струј, elektr, power, electric, grid, uje, ujit, voda, vodu, vodovod, water, rrug,
+            autostrad, puteve, putevi, road, highway, internet, mrez, rrjet, network, telefon, ura$, bridge, aeroport,
+            aerodrom, airport, hekurudh, zeleznic, railway, kufi, granic, border]
+    hostile: [sabot, diversi, diverzij, sulm, napad, напад, attack, minuar, minira, shperth, eksplod, explos]
+    benign: [mirembajt, odrzavanj, одржавањ, maintenance, planned, planifik, planiran, bor$, bora$, debor, sneg, снег,
+             snow, snijeg, stuhi, oluj, storm, defekt, kvar, transformer, trafo]
+  security_incident:
+    label: Security incident
+    not_threat: "Ordinary crime without a security dimension (theft, traffic accidents) is not a threat."
+    keywords: [shperth, eksplod, експлоз, granat, гранат, bomb, explos, pushk, gjuajt, pucnj, пуцњ, pucal, shoot, gunfire,
+               plagos, ranjen, рањен, wounded, vras, ubijen, ubist, killed, kidnap, rrembim, otmic, sulm$, sulmi$, sulmuar,
+               napad$, napadnut, attacked, incident ne kufi, incident na granic, border incident, nderetnik, medjuetnick,
+               међуетнич, interethnic, inter ethnic]
+    hostile: [shperth, eksplod, granat, bomb, explos, pucnj, gjuajt, shoot, gunfire, plagos, ranjen, wounded, vras,
+              ubij, killed, kidnap, sulm, napad, attack, mjet shperthyes, eksplozivn]
+    benign: [vjedh, kradj, крађ, theft, stolen, aksident trafik, saobracajn nesrec, traffic accident, crash]
+  organized_activity:
+    label: Organized activity
+    not_threat: "Peaceful lawful protests, strikes and political rallies are not threats."
+    keywords: [protest, tubim, skup$, okuplj, demonstr, mobiliz, barrikad, barikad, барикад, bllokad, blokad, блокад,
+               kontraband, krijumcar, shverc, sverc, шверц, smuggl, rekrut, regrut, recruit, ekstrem, extrem, radikal,
+               arrest, uhaps]
+    hostile: [barrikad, barikad, bllokad, blokad, dhun, nasilj, насиљ, violence, armatos, naoruz, armed, mobiliz, rekrut,
+              regrut, recruit, kontraband, krijumcar, sverc, shverc, smuggl, arme$, armeve, armesh, oruzj, оружј, weapons,
+              municion, municij, ammunition]
+    benign: [paqesor, mirno, мирно, peaceful, grev, strajk, штрајк, strike, miting, rally]
+  regional:
+    label: Regional
+    not_threat: "Routine diplomacy and ordinary political statements are not threats."
+    keywords: [beograd, београд, belgrade, serbi, srbij, србиј, vucic, vuqiq, вучић, tiran, shqiperi, albanij, bruksel,
+               brisel, brussels, dialog, dijalog, ushtri, vojsk, војск, army, military, troops, trupa, sanksion, sankcij,
+               sanction, ambasad, embassy, vija administrative, administrativn, administrative line]
+    hostile: [gatishmeri, gotovost, готовост, readiness, alert$, mobiliz, ushtri, vojsk, army, military, troops, trupa,
+              sanksion, sankcij, sanction, kercenim, pretnj, претњ, threat, ultimat, embargo, bllokad, blokad]
+    benign: [takim, sastan, meeting, vizit, poset, visit, marreveshj, sporazum, agreement]
+
+# Severity score: five factors, each 1-5; score = weighted sum normalised to 0-100.
+threat_scoring:
+  weights: {target: 0.25, scale: 0.15, hostility: 0.30, credibility: 0.15, escalation: 0.15}
+  levels: {watch: 25, threat: 50, critical: 75}
+  min_category_share: 0.2       # share of posts using a category's keywords to put the case in that category
+  llm_band: [0.08, 0.2]         # ambiguous share: ask the LLM (if configured) to confirm the category
+  llm_budget: 2                 # LLM category checks per worker cycle
+
+# ---------------- events: what happened, where (hybridwatch/events.py) ----------------
+
+# Places in Kosovo (municipalities, border crossings) and regional capitals: stems -> name, lat, lon.
+# 'north: true' marks the sensitive northern municipalities (raises event severity).
+gazetteer:
+  - {name: Pristina, stems: [prishtin, pristin], lat: 42.6629, lon: 21.1655}
+  - {name: Mitrovica, stems: [mitrovic], lat: 42.8914, lon: 20.8660, north: true}
+  - {name: Zvečan, stems: [zvecan, zveqan], lat: 42.9075, lon: 20.8403, north: true}
+  - {name: Zubin Potok, stems: [zubin], lat: 42.9144, lon: 20.6897, north: true}
+  - {name: Leposavić, stems: [leposavi, leposaviq], lat: 43.1036, lon: 20.8028, north: true}
+  - {name: Jarinje crossing, stems: [jarinj], lat: 43.1590, lon: 20.7770, north: true}
+  - {name: Merdare crossing, stems: [merdar], lat: 43.0880, lon: 21.2540}
+  - {name: Banjska, stems: [banjsk], lat: 42.9890, lon: 20.7860, north: true}
+  - {name: Prizren, stems: [prizren], lat: 42.2139, lon: 20.7397}
+  - {name: Peja, stems: [peja$, peje$, pejes$, pec$, peci$, peja], lat: 42.6591, lon: 20.2883}
+  - {name: Gjakova, stems: [gjakov, djakovic, dakovic], lat: 42.3803, lon: 20.4308}
+  - {name: Ferizaj, stems: [ferizaj, urosevac], lat: 42.3702, lon: 21.1553}
+  - {name: Gjilan, stems: [gjilan, gnjilan], lat: 42.4635, lon: 21.4694}
+  - {name: Podujeva, stems: [podujev], lat: 42.9106, lon: 21.1933}
+  - {name: Vushtrri, stems: [vushtrri, vucitrn], lat: 42.8231, lon: 20.9675}
+  - {name: Gračanica, stems: [gracanic, graqanic], lat: 42.6003, lon: 21.1931}
+  - {name: Lipjan, stems: [lipjan, lipljan], lat: 42.5217, lon: 21.1250}
+  - {name: Drenas, stems: [drenas, glogovac], lat: 42.6253, lon: 20.8936}
+  - {name: Kaçanik, stems: [kacanik, kaqanik], lat: 42.2319, lon: 21.2594}
+  - {name: Dragash, stems: [dragash], lat: 42.0614, lon: 20.6533}
+  - {name: Istog, stems: [istog], lat: 42.7806, lon: 20.4875}
+  - {name: Skenderaj, stems: [skenderaj, srbica], lat: 42.7467, lon: 20.7886}
+  - {name: Obiliq, stems: [obiliq, obilic], lat: 42.6869, lon: 21.0703}
+  - {name: Fushë Kosova, stems: [fushe kosov, kosovo polje], lat: 42.6381, lon: 21.0961}
+  - {name: Belgrade (Serbia), stems: [beograd, belgrade], lat: 44.8125, lon: 20.4612, region: true}
+  - {name: Tirana (Albania), stems: [tiran], lat: 41.3275, lon: 19.8187, region: true}
+  - {name: Skopje (N. Macedonia), stems: [shkup, skopj], lat: 41.9981, lon: 21.4254, region: true}
+
+events:
+  min_posts: 3                  # a narrative needs this many posts...
+  min_share: 0.25               # ...and this share of them must use the category's words
+  merge_hours: 12               # narratives of one category, same place, starting within this window = one event
+  recompute_seconds: 20         # events are recomputed at most this often (wall time)
+
+# Sensitive targets, weighted 1-5 (5 = most critical). Matched in posts in all three languages and both scripts.
+# A hostile signal against a target of weight 1-2 can never be more than "Watch".
+sensitive_targets:
+  - {name: KFOR, weight: 5, stems: [kfor, кфор]}
+  - {name: EULEX, weight: 5, stems: [eulex, еулекс]}
+  - {name: Elections, weight: 5, stems: [zgjedhj, izbor, избор, election, votim, glasanj, гласањ]}
+  - {name: Power grid (KEK, KOSTT), weight: 5, stems: [kek$, kostt, keds, grid, rrjet elektrik, elektro mrez, rrym, struj,
+                                                  струј, electricity, power cut, power outage, blackout]}
+  - {name: Water supply, weight: 5, stems: [uje$, ujit, ujin, ujesjell, voda$, vodu$, vode$, вода, vodovod, water supply,
+                                           tap water, drinking water, rubinet]}
+  - {name: Border crossings, weight: 5, stems: [jarinj, јарињ, merdar, мердар, bernjak, brnjak, pikekalim, prelaz, прелаз,
+                                                border crossing]}
+  - {name: Government portals, weight: 5, stems: [ekosova, rks gov, government portal, portali shteteror, drzavni portal]}
+  - {name: Police, weight: 5, stems: [polici, policij, полициј, police]}
+  - {name: Banks, weight: 4, stems: [bank, банк]}
+  - {name: Telecom, weight: 4, stems: [telekom, telecom, ipko, vala$, internet]}
+  - {name: Hospitals, weight: 4, stems: [spital, bolnic, болниц, hospital$, hospitals$, qkuk]}
+  - {name: Airport, weight: 4, stems: [aeroport, aerodrom, аеродром, airport]}
+  - {name: Ibar bridge / Mitrovica, weight: 4, stems: [ura e ibrit, ibarski most, ibar bridge, mitrovic, митровиц]}
+  - {name: Inter-community relations, weight: 4, stems: [nderetnik, medjuetnick, међуетнич, interethnic, inter ethnic]}
+  - {name: Army / military, weight: 4, stems: [ushtri, vojsk, војск, army, military, troops]}
+  - {name: Municipalities, weight: 3, stems: [komun, opstin, општин, municipal]}
+  - {name: Schools, weight: 3, stems: [shkoll, skol, школ, school]}
+  - {name: Media, weight: 3, stems: [gazetar, novinar, новинар, journalist]}
+  - {name: Roads / transport, weight: 2, stems: [rrug, autostrad, puteve, putevi, road, highway]}
+  - {name: Prices / economy, weight: 1, stems: [cmim, cena, цена, price, fatur, racun, bill$, bills$]}
 
 # ---------------- seeded into the database on first run ----------------
 sources:
@@ -95,3 +264,12 @@ glossary:
   pristina: [prishtin, pristin, pristina]
   belgrade: [beograd, belgrade]
   border: [kufi, granic, border, crossing, jarinj, merdar]
+  # cyber terms (Albanian / Serbian / English) -> lets the linker match cyber events to narratives
+  cyber: [kibernet, sajber, cyber, informatik]
+  # stems match word prefixes: avoid short stems that hit unrelated words (e.g. 'isp' -> 'ispit' = exam)
+  hackers: [haker, hacker, hakov, hakuar]
+  ddos: [ddos]
+  network: [rrjet, mrez, network, internet, provajder, provider]
+  data: [dhenat, dhena, podac, podat, data, databaz]
+  leak: [rrjedhj, rrjedh, curenj, procure, leak]
+  ransomware: [ransom, otkup, shantazh]

@@ -8,7 +8,6 @@
 """
 from __future__ import annotations
 
-import math
 from bisect import bisect_right
 import sqlite3
 from collections import Counter, defaultdict
@@ -139,7 +138,9 @@ def evaluate_signals(st: dict, th: dict) -> dict:
     return sig
 
 
-def alert_type(sig: dict) -> str | None:
+def alert_type(sig: dict, hybrid: bool = True) -> str | None:
+    if hybrid and "hybrid" in sig:
+        return "hybrid"
     if "coordination" in sig:
         return "coordination"
     if "debunk_match" in sig:
@@ -168,26 +169,16 @@ def confidence_label(c: float) -> str:
     return "High" if c >= 0.75 else "Medium" if c >= 0.5 else "Low"
 
 
-SEVERITY = ["low", "medium", "high", "critical"]
-
-
-def severity(sig: dict, st: dict, sensitive_hits: int) -> str:
-    score = 0.0
-    score += {"coordination": 2, "debunk_match": 1.5, "trending": 0.5}.get(alert_type(sig) or "", 0)
-    score += 1 if "debunk_match" in sig and "coordination" in sig else 0
-    score += min(math.log10(max(st.get("reach", 1), 1)) - 3, 2) if st.get("reach", 0) > 1000 else 0
-    score += min(sensitive_hits, 2) * 0.75
-    if score >= 5:
-        return "critical"
-    if score >= 3.5:
-        return "high"
-    if score >= 2:
-        return "medium"
-    return "low"
+# Levels (threat.py) replace the old low/medium/high/critical mapping, rank for rank.
+SEVERITY = ["info", "watch", "threat", "critical"]
 
 
 def reasons(sig: dict, st: dict, fc: dict | None) -> list[str]:
     out = []
+    if "hybrid" in sig:
+        h = sig["hybrid"]
+        more = f" (+{h['count'] - 1} more cyber event(s))" if h.get("count", 1) > 1 else ""
+        out.append(f"Linked to cyber event #{h['events'][0]}: {h['reason']}{more}")
     if "coordination" in sig:
         c = sig["coordination"]
         v = c.get("versions", 1)

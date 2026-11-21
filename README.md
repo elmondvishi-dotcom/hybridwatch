@@ -76,9 +76,46 @@ The worker and the web interface are separate. Closing the browser **does not st
 * **Confirm** turns the narrative into a known claim (feedback loop) and records which AI pre-fill fields the analyst changed, which measures pre-fill accuracy.
 * The **AI pre-fill** shows its reason for every field and says "Unknown" when unsure. The actor is suggested only with concrete evidence (account overlap with a confirmed case).
 
+### Events and the situation picture
+Narratives and cyber events become **events**: what happened, where, how sure (`hybridwatch/events.py`).
+
+| Category | Detected from |
+|---|---|
+| Security incident | explosions, shootings, attacks (Albanian / Serbian / English word stems in `config.yaml → taxonomy`) |
+| Organized activity | protests, barricades, mobilisation, smuggling, arrests of criminal groups |
+| Infrastructure disruption | power / water / road / telecom disruptions (a disruption word **and** an infrastructure object) |
+| Regional development | Belgrade, Tirana, Brussels, dialogue, military moves, sanctions |
+| Information threat | disinformation and coordinated campaigns (from the narrative alerts) |
+| Cyber incident | verified cyber claims (cyber module) |
+
+* **Where:** a gazetteer of Kosovo municipalities, border crossings and regional capitals (`config.yaml → gazetteer`). Northern municipalities raise severity.
+* **A campaign is split from the real event:** in a narrative with a coordinated campaign, the copy-paste posts become an *information threat* and the organic posts are classified on their own (the real power cut vs. the "it was sabotage" campaign).
+* **Confidence (Admiralty):** B1 = credible outlets and an official statement, B2 = several credible outlets, B3 = one, F4/F5 = social media only. Every event lists its sources, key reports, indicators, a timeline (first mention, first credible report, official statement, alerts, cyber events) and its context (linked campaigns, cyber events, related events in the same place).
+* **Situation view** (the start page): category tiles, map, priority list, a generated situation brief (each line traceable to an event) and a timeline by category.
+
+### Cyber module and hybrid threats
+Every cyber event (DDoS claim, ransomware listing, defacement, data-breach claim, outage, exploited vulnerability) is stored as a **claim** and verified by checks. Each check is stored with its result, detail, evidence link and time, so every verdict is traceable (`hybridwatch/verify.py`).
+
+| Status | Rule |
+|---|---|
+| **Confirmed** | a technical check (availability, IODA, CISA KEV, …) **and** an independent source (credible news, official/CERT statement) support it, nothing strong contradicts it |
+| **Partly confirmed** | one supporting check |
+| **Refuted** | a technical check clearly contradicts it: the site was up the whole time (≥ 2 probes), or the victim was already listed long ago (old re-post) |
+| **Unverified** | nothing yet; open claims are re-checked automatically for 48 h |
+
+Confidence uses the **NATO Admiralty Code**: source reliability A–F from the source type (CERT = A, established media = B/C, hacktivist channel = E), information credibility 1–6 from the checks (in this tool 6 = contradicted by the checks), plus a 0–1 score.
+
+**Hybrid link** (`hybridwatch/hybrid.py`): a cyber event and a disinformation narrative are linked when they share the target or sector, overlap in time (24 h window) and share a glossary concept. The alert becomes **"Hybrid threat: cyber + information"**, one level more severe, with the reason in "Why flagged", e.g. *"Same target: Pristina grid. Outage at 11:30, coordinated 'sabotage' narrative started 12:00 (30 min later)."* Refuted claims are never linked.
+
+**Sources** (`hybridwatch/cyber_collectors.py`, enable in Settings): Ransomware.live API, IODA outages, CISA KEV (filtered by `cyber.watch_products`), CERT RSS/HTML pages, public Telegram channels. Public data only, one GET per poll with rate limits and timeouts; leak-site links returned by trackers are dropped and never stored; nothing is ever scanned. The demo uses six synthetic events with **recorded** check results (`data/demo_cyber.json`), so it makes no network calls.
+
 ---
 
 ## Results on the synthetic scenario
+
+Events (`py scripts/evaluate.py`): category correct for **12/12** true stories and place correct for **12/12** (football and energy-price chatter correctly produce no threat event).
+
+Cyber claims (6 synthetic events, `py scripts/evaluate.py`): verdict accuracy **6/6** (3 confirmed, 2 refuted, 1 unverified), median time from claim to verdict **15 min**, and the hybrid link outage → "grid sabotage" campaign is **found** with no false links.
 
 `py scripts/evaluate.py` (2,615 posts, 9 ground-truth narratives, 3 campaigns):
 

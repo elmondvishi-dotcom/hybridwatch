@@ -1,0 +1,22 @@
+kosovo-municipalities.geojson
+=============================
+
+Municipal boundaries of Kosovo (38 municipalities, ADM2).
+
+Source:      geoBoundaries, gbOpen release, XKX ADM2 (boundaryID XKX-ADM2-46174442, build Dec 12, 2023),
+             simplified geometry.
+             https://www.geoboundaries.org/  -  https://github.com/wmgeolab/geoBoundaries
+Underlying:  OpenStreetMap, via Wambacher's OSM boundaries (wambachers-osm.website/boundaries/), 2017
+Licence:     Creative Commons Attribution-ShareAlike 2.0 (CC BY-SA 2.0), as stated by geoBoundaries
+             https://creativecommons.org/licenses/by-sa/2.0/
+Attribution: © OpenStreetMap contributors (www.openstreetmap.org/copyright); geoBoundaries
+             (Runfola et al. 2020, "geoBoundaries: A global database of political administrative boundaries",
+             PLoS ONE 15(4): e0231866).
+
+Changes made by HybridWatch (scripts/make_municipality_map.py):
+  - coordinates rounded to 4 decimals
+  - source names replaced by ids and names in Albanian, Serbian (Latin) and Serbian (Cyrillic)
+  - a label point added per municipality
+
+As required by CC BY-SA, this modified file is shared under the same licence (CC BY-SA 2.0).
+The attribution is also shown under the map in the application.
