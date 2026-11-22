@@ -1,0 +1,175 @@
+[
+ {
+  "ext_id": "w8-cyber-hybrid",
+  "kind": "outage",
+  "title": "Card payments and ATMs down in Gračanica",
+  "target": "payments operator in Gračanica (synthetic)",
+  "sector": "finance",
+  "claimed_actor": null,
+  "source_name": "IODA / status page (recorded, synthetic)",
+  "source_type": "ioda",
+  "source_url": "https://example.org/status",
+  "claimed_at": 1798464457.6924725,
+  "first_seen": 1798464817.6924725,
+  "raw": {
+   "synthetic": true,
+   "keywords": [
+    "bank",
+    "kartel",
+    "bankomat",
+    "ATM",
+    "graçanicë",
+    "gračanica"
+   ],
+   "gt_status": "confirmed",
+   "gt_hybrid": "camp_cyberclaim_payments_gračanica",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "supports",
+     "checked_at": 1798464817.7,
+     "detail": "Outage signal confirmed (synthetic)",
+     "evidence_url": "https://example.org/status"
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "w8-cyber-0",
+  "target": "Kosovo Tax Administration website (synthetic)",
+  "sector": "government",
+  "claimed_at": 1798352710.0299654,
+  "first_seen": 1798352890.0299654,
+  "source_url": "https://example.org/w8/0",
+  "claimed_actor": "hacktivist_w8",
+  "source_name": "t.me/hacktivist_w8",
+  "source_type": "hacktivist",
+  "kind": "data_breach_claim",
+  "title": "Hacktivists claim a data leak at Kosovo Tax Administration website",
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "keywords": [
+    "atk"
+   ],
+   "gt_status": "unverified"
+  }
+ },
+ {
+  "ext_id": "w8-cyber-1",
+  "target": "Municipality of Podujeva website (synthetic)",
+  "sector": "government",
+  "claimed_at": 1798377121.4182217,
+  "first_seen": 1798377301.4182217,
+  "source_url": "https://example.org/w8/1",
+  "claimed_actor": "hacktivist_w8",
+  "source_name": "Ransomware tracker (recorded, synthetic)",
+  "source_type": "ransomware_tracker",
+  "kind": "ransomware_claim",
+  "title": "Ransomware listing: Municipality of Podujeva website",
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "description": "Municipality of Podujeva website, Kosovo",
+   "previously_listed_at": "5 May 2024",
+   "previous_listing_url": "https://example.org/old",
+   "gt_status": "refuted"
+  }
+ },
+ {
+  "ext_id": "w8-cyber-2",
+  "target": "Cisco IOS XE",
+  "sector": "other",
+  "claimed_at": 1798411099.1702104,
+  "first_seen": 1798411279.1702104,
+  "source_url": "https://example.org/w8/2",
+  "claimed_actor": null,
+  "source_name": "CISA KEV (recorded, synthetic)",
+  "source_type": "kev",
+  "kind": "vulnerability",
+  "title": "CVE-2023-20198 (Cisco IOS XE) actively exploited",
+  "raw": {
+   "synthetic": true,
+   "cve": "CVE-2023-20198",
+   "vendor": "Cisco",
+   "product": "IOS XE",
+   "gt_status": "confirmed",
+   "recorded_checks": [
+    {
+     "check_name": "kev",
+     "result": "supports",
+     "checked_at": 1798411099.2,
+     "detail": "CVE-2023-20198 listed as actively exploited",
+     "evidence_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "w8-cyber-3",
+  "target": "Ministry of Health website (synthetic)",
+  "sector": "health",
+  "claimed_at": 1798434146.7006445,
+  "first_seen": 1798434326.7006445,
+  "source_url": "https://example.org/w8/3",
+  "claimed_actor": "hacktivist_w8",
+  "source_name": "t.me/hacktivist_w8",
+  "source_type": "hacktivist",
+  "kind": "ddos_claim",
+  "title": "Hacktivists claim DDoS on Ministry of Health website",
+  "raw": {
+   "synthetic": true,
+   "domain": "t3w8.example.org",
+   "keywords": [
+    "ministria e shëndetësisë"
+   ],
+   "gt_status": "refuted",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Up (HTTP 200)",
+     "evidence_url": "https://t3w8.example.org/",
+     "checked_at": 1798434326.7
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Up (HTTP 200)",
+     "evidence_url": "https://t3w8.example.org/",
+     "checked_at": 1798435046.7
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Up (HTTP 200)",
+     "evidence_url": "https://t3w8.example.org/",
+     "checked_at": 1798436246.7
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "w8-cyber-4",
+  "target": "Demo Telecom (synthetic)",
+  "sector": "telecom",
+  "claimed_at": 1798464090.0434134,
+  "first_seen": 1798464270.0434134,
+  "source_url": "https://example.org/w8/4",
+  "claimed_actor": "hacktivist_w8",
+  "source_name": "Ransomware tracker (recorded, synthetic)",
+  "source_type": "ransomware_tracker",
+  "kind": "ransomware_claim",
+  "title": "Ransomware listing: Demo Telecom",
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "description": "Demo Telecom, Kosovo",
+   "keywords": [
+    "demo telecom",
+    "demo telecom"
+   ],
+   "gt_status": "confirmed"
+  }
+ }
+]

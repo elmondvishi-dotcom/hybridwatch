@@ -19,7 +19,7 @@ from .threat import ThreatModel
 from .clustering import OnlineClusterer
 from .db import connect, get_setting, set_setting
 from .config import resolve
-from .embed import make_embedder
+from .embed import HashingEmbedder, make_embedder
 from .factcheck import FactCheckLibrary
 from .llm import LLM
 from .minhash import LSHIndex, MinHasher
@@ -29,12 +29,18 @@ from .text import Glossary, detect_language, normalize
 class Pipeline:
     def __init__(self, cfg: dict, db_path: str | None = None, quiet: bool = False):
         self.cfg = cfg
-        self.th = cfg["thresholds"]
+        self.th = dict(cfg["thresholds"])
         self.quiet = quiet
         self.conn = connect(db_path or resolve(cfg, cfg["db_path"]))
         self.glossary = Glossary(cfg.get("glossary", {}))
         self.embedder = make_embedder(cfg, self.glossary)
+        self.neural = not isinstance(self.embedder, HashingEmbedder)
+        if self.neural:   # XLM-RoBERTa similarities live on a different scale
+            self.th.update(cfg.get("thresholds_neural", {}) or {})
         self.llm = LLM(cfg)
+        # labels and translations run in a background thread (llm_worker.py), so a slow LLM never delays alerts
+        self.llm_background = self.llm.enabled and (cfg.get("llm", {}) or {}).get("background", True)
+        self._llm_inline = self.llm.enabled and not self.llm_background
         self.hasher = MinHasher()
         self.lsh = LSHIndex()
         self.dup_of: dict[int, int] = {}
@@ -280,7 +286,7 @@ class Pipeline:
             "SELECT n.id, n.size, n.labeled_at_size, n.label, n.label_source, a.signals FROM narratives n "
             "JOIN alerts a ON a.narrative_id=n.id").fetchall()
         for r in rows:
-            needs_llm = self.llm.enabled and (r["label_source"] != "llm" or r["size"] >= 2 * (r["labeled_at_size"] or 1))
+            needs_llm = self._llm_inline and (r["label_source"] != "llm" or r["size"] >= 2 * (r["labeled_at_size"] or 1))
             coord = json.loads(r["signals"] or "{}").get("coordination", {})
             groups = coord.get("groups") or []
             if not needs_llm and r["label"]:
@@ -310,7 +316,7 @@ class Pipeline:
             self.conn.execute("UPDATE narratives SET label=?, label_source=?, labeled_at_size=?, tags=?, "
                               "rep_post_id=?, en_post_id=? WHERE id=?",
                               (label, source, r["size"], json.dumps(rep["tags"]), rep["rep_id"], rep["en_id"], r["id"]))
-        if self.llm.enabled:
+        if self._llm_inline:
             todo = self.conn.execute(
                 "SELECT p.id, p.text FROM posts p JOIN alerts a ON a.narrative_id=p.narrative_id "
                 "WHERE p.translation IS NULL AND p.lang!='en' ORDER BY a.bumped_at DESC, p.followers DESC LIMIT ?",
@@ -325,6 +331,8 @@ class Pipeline:
         """Pick what the UI shows for a narrative, as separate fields:
         tags (top glossary concepts), rep_id (most central post, any language),
         en_id (most central English post, if any) and the heuristic text label."""
+        if self.neural:          # the neural model is slower: 60 recent posts are enough to pick a centre
+            sample = sample[:60]
         texts = [s["text"] for s in sample]
         vecs = self.embedder.embed(texts)
         sims = vecs @ self.clusterer.centroid(nid)

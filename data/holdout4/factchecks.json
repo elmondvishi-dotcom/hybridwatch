@@ -1,0 +1,42 @@
+[
+ {
+  "id": "w4-fc-1",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w4/factcheck/1",
+  "claim": "Claim that a new tax on every phone is coming. do të vendoset taksë e re për çdo telefon. uvodi se novi porez na svaki telefon."
+ },
+ {
+  "id": "w4-fc-2",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w4/factcheck/2",
+  "claim": "Claim that tap water contains dangerous chemicals. uji i rubinetit ka kimikate të rrezikshme. voda iz česme sadrži opasne hemikalije."
+ },
+ {
+  "id": "w4-fc-3",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w4/factcheck/3",
+  "claim": "Claim that Kosovo passports are no longer valid in the EU. pasaportat e Kosovës nuk vlejnë më në BE. kosovski pasoši više ne važe u EU."
+ },
+ {
+  "id": "w4-fc-4",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w4/factcheck/4",
+  "claim": "Claim: Police killed a protester in Zvečan! They are hiding it, share. Policia vrau një protestues në Zveçan! Ata e fshehin, shpërndajeni. Policija ubila demonstranta u opštini Zvečan! Kriju to, podelite."
+ },
+ {
+  "id": "w4-fc-5",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w4/factcheck/5",
+  "claim": "Claim: The election commission was hacked, votes changed in Pristina! The election is a fraud. KQZ u hakua, votat u ndryshuan në Prishtinë! Zgjedhjet janë mashtrim. CIK hakovan, glasovi promenjeni u opštini Priština! Izbori su prevara."
+ }
+]

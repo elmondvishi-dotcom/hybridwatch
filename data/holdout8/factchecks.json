@@ -1,0 +1,42 @@
+[
+ {
+  "id": "w8-fc-1",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w8/factcheck/1",
+  "claim": "Claim that public-sector salaries will be cut by 30%. rrogat në sektorin publik do të ulen 30%. plate u javnom sektoru biće smanjene 30%."
+ },
+ {
+  "id": "w8-fc-2",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w8/factcheck/2",
+  "claim": "Claim that the electricity price doubles next month. çmimi i rrymës dyfishohet muajin tjetër. cena struje se duplira sledećeg meseca."
+ },
+ {
+  "id": "w8-fc-3",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w8/factcheck/3",
+  "claim": "Claim that a new tax on every phone is coming. do të vendoset taksë e re për çdo telefon. uvodi se novi porez na svaki telefon."
+ },
+ {
+  "id": "w8-fc-4",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w8/factcheck/4",
+  "claim": "Claim: The Serbian army has entered Fushë Kosova! Reliable sources, get ready. Ushtria serbe hyri në Fushë Kosovë! Burime të sigurta, përgatituni. Srpska vojska ušla u opštinu Kosovo Polje! Sigurni izvori, spremite se."
+ },
+ {
+  "id": "w8-fc-5",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w8/factcheck/5",
+  "claim": "Claim: The hospital in Gjakova has no medicine, patients are dying! The government hides it. Spitali në Gjakovë pa ilaçe, pacientët po vdesin! Qeveria e fsheh. Bolnica u opštini Đakovica bez lekova, pacijenti umiru! Vlada krije."
+ }
+]

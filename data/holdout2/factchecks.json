@@ -1,0 +1,34 @@
+[
+ {
+  "id": "hold2-fc-1",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-05-20",
+  "url": "https://example.org/holdout2/factcheck/eulex",
+  "claim": "Claim that EULEX was caught spying and is leaving Kosovo. EULEX u kap duke spiunuar. EULEX uhvaćen u špijunaži."
+ },
+ {
+  "id": "hold2-fc-2",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-02-14",
+  "url": "https://example.org/holdout2/factcheck/ballots",
+  "claim": "Claim that diaspora ballots were destroyed in Gjakova and the election was rigged. Votat e diasporës u shkatërruan në Gjakovë. Glasovi dijaspore uništeni u Đakovici."
+ },
+ {
+  "id": "hold2-fc-3",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2024-10-03",
+  "url": "https://example.org/holdout2/factcheck/sugar",
+  "claim": "Claim that shops will run out of sugar and sugar will be rationed. Do të mbarojë sheqeri. Nestaće šećera."
+ },
+ {
+  "id": "hold2-fc-4",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "Misleading",
+  "date": "2025-07-01",
+  "url": "https://example.org/holdout2/factcheck/fuel",
+  "claim": "Claim that fuel will cost 3 euros per litre next month. Nafta 3 euro. Gorivo 3 evra."
+ }
+]

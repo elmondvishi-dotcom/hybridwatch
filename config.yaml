@@ -6,18 +6,21 @@ db_path: data/hybridwatch.db
 
 # "hashing" = offline, fast, no download (default)
 # "sentence-transformers" = multilingual neural model (pip install sentence-transformers)
-embedder: hashing
-embedder_model: paraphrase-multilingual-MiniLM-L12-v2
+embedder: sentence-transformers   # XLM-RoBERTa sentence model (falls back to hashing if not installed)
+embedder_model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2   # XLM-RoBERTa base, 50+ languages
 
 # LLM is optional. Used only for: narrative labels, translations, debunk-match confirmation.
 # provider: none | anthropic | openai_compatible
 #   openai_compatible works with a locally hosted open-weight model (e.g. Mistral via Ollama:
 #   base_url http://localhost:11434/v1, model mistral) -> no data leaves your machine.
 llm:
-  provider: none
-  model: claude-haiku-5-5
-  base_url: http://localhost:11434/v1
-  api_key_env: ANTHROPIC_API_KEY
+  provider: openai_compatible   # Groq, free tier, no card (key from console.groq.com/keys)
+  model: auto                   # auto = try the best available free chat model until one answers
+  base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY     # the key is read from this environment variable, never stored here
+  background: true              # labels/translations run in their own thread, so the LLM never delays alerts
+  # Gemini instead:  base_url: https://generativelanguage.googleapis.com/v1beta/openai, api_key_env: GEMINI_API_KEY
+  # Mistral on your laptop (Ollama):  model: mistral, base_url: http://localhost:11434/v1, api_key_env: NONE
 
 worker:
   poll_seconds: 2          # how often the worker checks sources
@@ -77,6 +80,14 @@ thresholds:
   bump_growth: 2.0             # an alert is re-surfaced when its post count doubles
   dismissal_expiry_hours: 72   # extra caution after a dismissal fades after this
   lsh_window_hours: 24
+
+# XLM-RoBERTa similarities run higher than the hashing embedder's, so these replace the values above
+# whenever the neural embedder is active.
+thresholds_neural:
+  cluster_similarity: 0.60
+  merge_similarity: 0.75
+  debunk_similarity: 0.65
+
 
 # ---------------- what is a threat (hybridwatch/threat.py) ----------------
 # A case becomes a threat only if it touches something SENSITIVE (a weighted target below) AND shows a

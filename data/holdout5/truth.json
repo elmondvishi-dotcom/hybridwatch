@@ -1,0 +1,142 @@
+{
+ "campaigns": [
+  "camp_uranium_zvečan",
+  "camp_nato_base_ferizaj",
+  "camp_hospital_dragash",
+  "camp_cyberclaim_payments_zvečan"
+ ],
+ "events": {
+  "isp_gjilan": [
+   "infrastructure",
+   "Gjilan"
+  ],
+  "landslide_pristina": [
+   "infrastructure",
+   "Pristina"
+  ],
+  "power_leposavić": [
+   "infrastructure",
+   "Leposavić"
+  ],
+  "flood_mitrovica": [
+   "infrastructure",
+   "Mitrovica"
+  ],
+  "bridge_ferizaj": [
+   "infrastructure",
+   "Ferizaj"
+  ],
+  "water_podujeva": [
+   "infrastructure",
+   "Podujeva"
+  ],
+  "armed_gjakova": [
+   "security_incident",
+   "Gjakova"
+  ],
+  "blast_leposavić": [
+   "security_incident",
+   "Leposavić"
+  ],
+  "device_peja": [
+   "security_incident",
+   "Peja"
+  ],
+  "arson_zvečan": [
+   "security_incident",
+   "Zvečan"
+  ],
+  "shooting_zvečan": [
+   "security_incident",
+   "Zvečan"
+  ],
+  "grenade_pristina": [
+   "security_incident",
+   "Pristina"
+  ],
+  "migrants_leposavić": [
+   "organized_activity",
+   "Leposavić"
+  ],
+  "protest_lipjan": [
+   "organized_activity",
+   "Lipjan"
+  ],
+  "cigarettes_vushtrri": [
+   "organized_activity",
+   "Vushtrri"
+  ],
+  "roadblock_gračanica": [
+   "organized_activity",
+   "Gračanica"
+  ],
+  "weapons_mitrovica": [
+   "organized_activity",
+   "Mitrovica"
+  ],
+  "druglab_peja": [
+   "organized_activity",
+   "Peja"
+  ],
+  "un_russia_regional": [
+   "regional",
+   null
+  ],
+  "army_alert_regional": [
+   "regional",
+   null
+  ],
+  "montenegro_regional": [
+   "regional",
+   null
+  ],
+  "mk_border_regional": [
+   "regional",
+   null
+  ],
+  "rumour_phones": [
+   "disinformation",
+   null
+  ],
+  "rumour_water_chem": [
+   "disinformation",
+   null
+  ],
+  "rumour_passports": [
+   "disinformation",
+   null
+  ],
+  "camp_uranium_zvečan": [
+   "disinformation",
+   null
+  ],
+  "camp_nato_base_ferizaj": [
+   "disinformation",
+   null
+  ],
+  "camp_hospital_dragash": [
+   "disinformation",
+   null
+  ],
+  "outage_payments_zvečan": [
+   "infrastructure",
+   "Zvečan"
+  ],
+  "camp_cyberclaim_payments_zvečan": [
+   "disinformation",
+   null
+  ],
+  "harmless_tech_conf": [
+   null,
+   null
+  ],
+  "harmless_food_fest": [
+   null,
+   null
+  ],
+  "harmless_concert": [
+   null,
+   null
+  ]
+ }
+}

@@ -1,0 +1,142 @@
+{
+ "campaigns": [
+  "camp_uranium_podujeva",
+  "camp_hospital_prizren",
+  "camp_nato_base_gjakova",
+  "camp_cyberclaim_isp_prizren"
+ ],
+ "events": {
+  "flood_gjakova": [
+   "infrastructure",
+   "Gjakova"
+  ],
+  "substation_vushtrri": [
+   "infrastructure",
+   "Vushtrri"
+  ],
+  "snow_leposavić": [
+   "infrastructure",
+   "Leposavić"
+  ],
+  "heating_skenderaj": [
+   "infrastructure",
+   "Skenderaj"
+  ],
+  "water_vushtrri": [
+   "infrastructure",
+   "Vushtrri"
+  ],
+  "landslide_leposavić": [
+   "infrastructure",
+   "Leposavić"
+  ],
+  "grenade_gjilan": [
+   "security_incident",
+   "Gjilan"
+  ],
+  "patrol_fushë_kosova": [
+   "security_incident",
+   "Fushë Kosova"
+  ],
+  "blast_skenderaj": [
+   "security_incident",
+   "Skenderaj"
+  ],
+  "arson_dragash": [
+   "security_incident",
+   "Dragash"
+  ],
+  "shooting_leposavić": [
+   "security_incident",
+   "Leposavić"
+  ],
+  "armed_zubin_potok": [
+   "security_incident",
+   "Zubin Potok"
+  ],
+  "migrants_peja": [
+   "organized_activity",
+   "Peja"
+  ],
+  "cigarettes_zubin_potok": [
+   "organized_activity",
+   "Zubin Potok"
+  ],
+  "druglab_peja": [
+   "organized_activity",
+   "Peja"
+  ],
+  "weapons_istog": [
+   "organized_activity",
+   "Istog"
+  ],
+  "fuel_fushë_kosova": [
+   "organized_activity",
+   "Fushë Kosova"
+  ],
+  "protest_fushë_kosova": [
+   "organized_activity",
+   "Fushë Kosova"
+  ],
+  "mk_border_regional": [
+   "regional",
+   null
+  ],
+  "rs_crisis_regional": [
+   "regional",
+   null
+  ],
+  "montenegro_regional": [
+   "regional",
+   null
+  ],
+  "diplomats_regional": [
+   "regional",
+   null
+  ],
+  "rumour_water_chem": [
+   "disinformation",
+   null
+  ],
+  "rumour_phones": [
+   "disinformation",
+   null
+  ],
+  "rumour_petrol": [
+   "disinformation",
+   null
+  ],
+  "camp_uranium_podujeva": [
+   "disinformation",
+   null
+  ],
+  "camp_hospital_prizren": [
+   "disinformation",
+   null
+  ],
+  "camp_nato_base_gjakova": [
+   "disinformation",
+   null
+  ],
+  "outage_isp_prizren": [
+   "infrastructure",
+   "Prizren"
+  ],
+  "camp_cyberclaim_isp_prizren": [
+   "disinformation",
+   null
+  ],
+  "harmless_weather": [
+   null,
+   null
+  ],
+  "harmless_food_fest": [
+   null,
+   null
+  ],
+  "harmless_concert": [
+   null,
+   null
+  ]
+ }
+}

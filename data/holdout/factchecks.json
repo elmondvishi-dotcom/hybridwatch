@@ -1,0 +1,34 @@
+[
+ {
+  "id": "hold-fc-1",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-04-03",
+  "url": "https://example.org/holdout/factcheck/vaccine",
+  "claim": "Claim that children in Ferizaj schools were poisoned by a vaccine. Fëmijët në Ferizaj u helmuan nga vaksina. Deca u Uroševcu otrovana vakcinom."
+ },
+ {
+  "id": "hold-fc-2",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-10-15",
+  "url": "https://example.org/holdout/factcheck/police-north",
+  "claim": "Claim that Kosovo Police will withdraw from the north and Serbian police will return. Policia e Kosovës largohet nga veriu. Kosovska policija napušta sever."
+ },
+ {
+  "id": "hold-fc-3",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/holdout/factcheck/remittance-tax",
+  "claim": "Claim that the government will tax diaspora remittances by 20%. Taksë 20% në paratë e diasporës. Porez od 20% na novac iz dijaspore."
+ },
+ {
+  "id": "hold-fc-4",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-02-10",
+  "url": "https://example.org/holdout/factcheck/visa",
+  "claim": "Claim that Kosovo will require visas from all Serbian citizens. Kosova vendos viza. Kosovo uvodi vize."
+ }
+]

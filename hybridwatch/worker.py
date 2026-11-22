@@ -15,6 +15,7 @@ from .config import load_config, resolve
 from .db import get_setting, set_setting
 from .collectors import make_collector
 from .pipeline import Pipeline
+from .llm_worker import LLMBackground
 from .cyber_collectors import make_cyber_collector
 from .events import EventDetector
 from .hybrid import Linker
@@ -133,6 +134,8 @@ class Worker:
 
     def run(self) -> None:
         print("[worker] running - Ctrl+C to stop")
+        if self.pipe.llm_background:
+            LLMBackground(self.cfg, self.stop).start()
         poll = self.cfg["worker"].get("poll_seconds", 2)
         while not self.stop.is_set():
             try:

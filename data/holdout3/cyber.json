@@ -1,0 +1,208 @@
+[
+ {
+  "ext_id": "hold3-cyber-1",
+  "kind": "ddos_claim",
+  "title": "Hacktivists claim DDoS on the Kosovo Police website",
+  "target": "Kosovo Police website",
+  "sector": "government",
+  "claimed_actor": "holdout3_hacktivist (synthetic)",
+  "source_name": "t.me/holdout3_hacktivist (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout3/telegram/1",
+  "claimed_at": 1795330800.0,
+  "first_seen": 1795330920.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "police.example.org",
+   "keywords": [
+    "policia",
+    "police",
+    "policija"
+   ],
+   "gt_status": "refuted",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.3 s)",
+     "evidence_url": "https://police.example.org/",
+     "checked_at": 1795330980.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.4 s)",
+     "evidence_url": "https://police.example.org/",
+     "checked_at": 1795331700.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.3 s)",
+     "evidence_url": "https://police.example.org/",
+     "checked_at": 1795333200.0
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold3-cyber-2",
+  "kind": "outage",
+  "title": "Kosovo Customs IT system outage",
+  "target": "Kosovo Customs IT system (dogana) (synthetic)",
+  "sector": "government",
+  "claimed_actor": null,
+  "source_name": "Customs status page (recorded) (synthetic)",
+  "source_type": "media",
+  "source_url": "https://example.org/holdout3/status/customs",
+  "claimed_at": 1795431600.0,
+  "first_seen": 1795431900.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "dogana.example.org",
+   "keywords": [
+    "dogan",
+    "carin",
+    "customs"
+   ],
+   "gt_status": "confirmed",
+   "gt_hybrid": "customs_hack_claim",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "supports",
+     "detail": "Customs declaration service not reachable (HTTP 503)",
+     "evidence_url": "https://dogana.example.org/",
+     "checked_at": 1795431900.0
+    },
+    {
+     "check_name": "availability",
+     "result": "supports",
+     "detail": "Still not reachable (HTTP 503)",
+     "evidence_url": "https://dogana.example.org/",
+     "checked_at": 1795433400.0
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold3-cyber-3",
+  "kind": "vulnerability",
+  "title": "CVE-2021-26855 (Microsoft Exchange ProxyLogon) actively exploited",
+  "target": "Microsoft Exchange Server",
+  "sector": "other",
+  "claimed_actor": null,
+  "source_name": "CISA KEV (recorded) (synthetic)",
+  "source_type": "kev",
+  "source_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+  "claimed_at": 1795374000.0,
+  "first_seen": 1795374000.0,
+  "raw": {
+   "synthetic": true,
+   "cve": "CVE-2021-26855",
+   "vendor": "Microsoft",
+   "product": "Exchange Server",
+   "gt_status": "confirmed",
+   "recorded_checks": [
+    {
+     "check_name": "kev",
+     "result": "supports",
+     "checked_at": 1795374000.0,
+     "detail": "CVE-2021-26855 listed as actively exploited",
+     "evidence_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-26855"
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold3-cyber-4",
+  "kind": "ransomware_claim",
+  "title": "Ransomware listing: Demo College, Pristina",
+  "target": "Demo College (synthetic)",
+  "sector": "other",
+  "claimed_actor": "DemoLocker3 (synthetic)",
+  "source_name": "Ransomware tracker (recorded) (synthetic)",
+  "source_type": "ransomware_tracker",
+  "source_url": "https://example.org/holdout3/ransomware/college",
+  "claimed_at": 1795392000.0,
+  "first_seen": 1795392480.0,
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "description": "Private college in Pristina, Kosovo",
+   "keywords": [
+    "demo college",
+    "kolegji demo"
+   ],
+   "gt_status": "confirmed"
+  }
+ },
+ {
+  "ext_id": "hold3-cyber-5",
+  "kind": "data_breach_claim",
+  "title": "Hacktivists claim a Demo Telekom customer-data leak",
+  "target": "Demo Telekom (synthetic)",
+  "sector": "telecom",
+  "claimed_actor": "holdout3_hacktivist (synthetic)",
+  "source_name": "t.me/holdout3_hacktivist (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout3/telegram/2",
+  "claimed_at": 1795438800.0,
+  "first_seen": 1795438980.0,
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "keywords": [
+    "demo telekom"
+   ],
+   "previously_listed_at": "12 April 2022",
+   "previous_listing_url": "https://example.org/holdout3/leaks/2022",
+   "gt_status": "refuted"
+  }
+ },
+ {
+  "ext_id": "hold3-cyber-6",
+  "kind": "defacement",
+  "title": "Hacktivists claim defacement of the Obiliq municipality website",
+  "target": "Obiliq municipality website",
+  "sector": "government",
+  "claimed_actor": "holdout3_hacktivist (synthetic)",
+  "source_name": "t.me/holdout3_hacktivist (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout3/telegram/3",
+  "claimed_at": 1795456800.0,
+  "first_seen": 1795456980.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "obiliq.example.org",
+   "keywords": [
+    "obiliq",
+    "obilić"
+   ],
+   "gt_status": "confirmed",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200)",
+     "evidence_url": "https://obiliq.example.org/",
+     "checked_at": 1795457100.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200)",
+     "evidence_url": "https://obiliq.example.org/",
+     "checked_at": 1795458600.0
+    },
+    {
+     "check_name": "content_hash",
+     "result": "supports",
+     "detail": "Homepage content changed: hacker banner",
+     "evidence_url": "https://obiliq.example.org/",
+     "checked_at": 1795457100.0
+    }
+   ]
+  }
+ }
+]

@@ -25,27 +25,88 @@ class LLM:
         if self.provider == "anthropic" and not self.api_key:
             print("[llm] no API key found; LLM features disabled")
             self.provider = "none"
+        remote = self.provider == "openai_compatible" and not any(h in self.base_url for h in ("localhost", "127.0.0.1"))
+        if remote and not self.api_key:
+            print(f"[llm] {c.get('api_key_env')} is not set; LLM features disabled "
+                  f"(Windows: setx {c.get('api_key_env')} \"your-key\", then open a new terminal)")
+            self.provider = "none"
+
+    def _resolve_model(self) -> None:
+        """model: auto -> ask the provider which models exist and take the newest Flash-type chat model
+        (Google renames Gemini models often, so a fixed name goes stale)."""
+        if self.model and self.model != "auto":
+            return
+        import time as _t
+        if _t.time() - getattr(self, "_resolve_failed", 0) < 300:     # no network: retry at most every 5 minutes
+            return
+        try:
+            headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+            r = httpx.get(f"{self.base_url}/models", headers=headers, timeout=20)
+            r.raise_for_status()
+            ids = [m.get("id", "") for m in r.json().get("data", [])]
+            short = lambda i: i.split("/")[-1]
+            skip = ("image", "tts", "audio", "live", "embed", "vision", "thinking", "exp", "whisper", "guard",
+                    "safeguard", "moderation", "transcribe", "speech", "omni")
+            chat = [i for i in ids if not any(k in short(i).lower() for k in skip)]
+
+            def version(i):
+                import re
+                m = re.search(r"(\d+(?:\.\d+)?)", short(i))
+                return float(m.group(1)) if m else 0.0
+            # preference: Gemini Flash (Google), then strong open models (Groq / OpenRouter / Ollama)
+            prefs = ("flash", "gpt-oss-120b", "llama-4", "llama-3.3-70b", "qwen3", "llama", "gpt-oss", "mistral", "gemma")
+            order = []
+            for k in prefs:
+                group = [i for i in chat if k in short(i).lower() and "lite" not in short(i).lower() and i not in order]
+                order += sorted(group, key=lambda i: ("preview" not in i, version(i)), reverse=True)
+            order += [i for i in chat if i not in order]
+            for cand in order[:8]:                 # first model that actually answers (free tier differs by model)
+                self.model = cand
+                if self._raw_ask("Reply with OK.", 5) is not None:
+                    print(f"[llm] model: auto -> {cand}")
+                    return
+                print(f"[llm] {cand} refused, trying the next model ...")
+            self.model = order[0] if order else (ids[0] if ids else "auto")
+            print(f"[llm] no model answered; last error above")
+        except Exception as e:
+            self._resolve_failed = _t.time()
+            print(f"[llm] could not list models ({e}); set an exact model name in config.yaml")
 
     @property
     def enabled(self) -> bool:
         return self.provider != "none"
 
-    def ask(self, prompt: str, max_tokens: int = 200) -> str | None:
+    def ask(self, prompt: str, max_tokens: int = 200, temperature: float | None = None, timeout: float | None = None) -> str | None:
+        if self.provider == "openai_compatible" and (not self.model or self.model == "auto"):
+            self._resolve_model()
+            if self.model == "auto":
+                return None
+        return self._raw_ask(prompt, max_tokens, temperature, timeout)
+
+    def _raw_ask(self, prompt: str, max_tokens: int = 200, temperature: float | None = None,
+                 timeout: float | None = None) -> str | None:
         try:
             if self.provider == "anthropic":
-                r = httpx.post("https://api.anthropic.com/v1/messages", timeout=30, headers={
+                body = {"model": self.model, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}]}
+                if temperature is not None:
+                    body["temperature"] = temperature
+                r = httpx.post("https://api.anthropic.com/v1/messages", timeout=timeout or 30, headers={
                     "x-api-key": self.api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                    json={"model": self.model, "max_tokens": max_tokens,
-                          "messages": [{"role": "user", "content": prompt}]})
+                    json=body)
                 r.raise_for_status()
                 return "".join(b.get("text", "") for b in r.json()["content"]).strip()
             if self.provider == "openai_compatible":
                 headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-                r = httpx.post(f"{self.base_url}/chat/completions", timeout=60, headers=headers,
-                               json={"model": self.model, "max_tokens": max_tokens,
-                                     "messages": [{"role": "user", "content": prompt}]})
+                body = {"model": self.model, "max_tokens": max_tokens, "messages": [{"role": "user", "content": prompt}]}
+                if temperature is not None:
+                    body["temperature"] = temperature
+                r = httpx.post(f"{self.base_url}/chat/completions", timeout=timeout or 60, headers=headers,
+                               json=body)
                 r.raise_for_status()
                 return r.json()["choices"][0]["message"]["content"].strip()
+        except httpx.HTTPStatusError as e:
+            detail = e.response.text[:400].replace("\n", " ")
+            print(f"[llm] call failed: HTTP {e.response.status_code} from {self.model}: {detail}")
         except Exception as e:
             print(f"[llm] call failed: {e}")
         return None

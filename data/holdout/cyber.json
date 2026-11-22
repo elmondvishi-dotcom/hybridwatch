@@ -1,0 +1,209 @@
+[
+ {
+  "ext_id": "hold-cyber-1",
+  "kind": "defacement",
+  "title": "Hacktivists claim defacement of the Gjilan municipality website",
+  "target": "Gjilan municipality website",
+  "sector": "government",
+  "claimed_actor": "holdout_hacktivist_grp (synthetic)",
+  "source_name": "t.me/holdout_hacktivist_grp (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout/telegram/1",
+  "claimed_at": 1794135600.0,
+  "first_seen": 1794135780.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "gjilan.example.org",
+   "keywords": [
+    "gjilan",
+    "gnjilan"
+   ],
+   "gt_status": "confirmed",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.5 s)",
+     "evidence_url": "https://gjilan.example.org/",
+     "checked_at": 1794135900.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.4 s)",
+     "evidence_url": "https://gjilan.example.org/",
+     "checked_at": 1794137400.0
+    },
+    {
+     "check_name": "content_hash",
+     "result": "supports",
+     "detail": "Homepage content changed: hacker banner replaces the usual page",
+     "evidence_url": "https://gjilan.example.org/",
+     "checked_at": 1794135900.0
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold-cyber-2",
+  "kind": "ddos_claim",
+  "title": "Hacktivists claim DDoS on the Kosovo Customs portal",
+  "target": "Kosovo Customs portal",
+  "sector": "government",
+  "claimed_actor": "holdout_hacktivist_grp (synthetic)",
+  "source_name": "t.me/holdout_hacktivist_grp (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout/telegram/2",
+  "claimed_at": 1794171600.0,
+  "first_seen": 1794171720.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "dogana.example.org",
+   "keywords": [
+    "dogana",
+    "customs",
+    "carina"
+   ],
+   "gt_status": "refuted",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.4 s)",
+     "evidence_url": "https://dogana.example.org/",
+     "checked_at": 1794171840.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.5 s)",
+     "evidence_url": "https://dogana.example.org/",
+     "checked_at": 1794172500.0
+    },
+    {
+     "check_name": "availability",
+     "result": "contradicts",
+     "detail": "Homepage up (HTTP 200, 0.4 s)",
+     "evidence_url": "https://dogana.example.org/",
+     "checked_at": 1794173700.0
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold-cyber-3",
+  "kind": "vulnerability",
+  "title": "CVE-2024-21762 (FortiOS SSL VPN) actively exploited",
+  "target": "Fortinet FortiOS SSL VPN",
+  "sector": "other",
+  "claimed_actor": null,
+  "source_name": "CISA KEV (recorded) (synthetic)",
+  "source_type": "kev",
+  "source_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+  "claimed_at": 1794146400.0,
+  "first_seen": 1794146400.0,
+  "raw": {
+   "synthetic": true,
+   "cve": "CVE-2024-21762",
+   "vendor": "Fortinet",
+   "product": "FortiOS",
+   "gt_status": "confirmed",
+   "recorded_checks": [
+    {
+     "check_name": "kev",
+     "result": "supports",
+     "checked_at": 1794146400.0,
+     "detail": "CVE-2024-21762 (FortiOS SSL VPN out-of-bounds write) listed as actively exploited",
+     "evidence_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-21762"
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold-cyber-4",
+  "kind": "ransomware_claim",
+  "title": "Ransomware listing: Demo Health Clinic, Prizren",
+  "target": "Demo Health Clinic (synthetic)",
+  "sector": "health",
+  "claimed_actor": "DemoCrypt (synthetic)",
+  "source_name": "Ransomware tracker (recorded) (synthetic)",
+  "source_type": "ransomware_tracker",
+  "source_url": "https://example.org/holdout/ransomware-tracker/clinic",
+  "claimed_at": 1794193200.0,
+  "first_seen": 1794193800.0,
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "description": "Private health clinic in Prizren, Kosovo",
+   "keywords": [
+    "demo health clinic"
+   ],
+   "gt_status": "confirmed"
+  }
+ },
+ {
+  "ext_id": "hold-cyber-5",
+  "kind": "outage",
+  "title": "Card payment and ATM outage at Demo Commerce Bank",
+  "target": "Demo Commerce Bank (synthetic)",
+  "sector": "finance",
+  "claimed_actor": null,
+  "source_name": "Homepage + payment status monitor (recorded) (synthetic)",
+  "source_type": "media",
+  "source_url": "https://example.org/holdout/status/bank",
+  "claimed_at": 1794229200.0,
+  "first_seen": 1794229560.0,
+  "raw": {
+   "synthetic": true,
+   "domain": "democommerce.example.org",
+   "keywords": [
+    "demo commerce",
+    "bankomat",
+    "kartel"
+   ],
+   "gt_status": "confirmed",
+   "gt_hybrid": "bank_run",
+   "recorded_checks": [
+    {
+     "check_name": "availability",
+     "result": "supports",
+     "detail": "Card-payment status page reports a full outage",
+     "evidence_url": "https://democommerce.example.org/status",
+     "checked_at": 1794229560.0
+    },
+    {
+     "check_name": "availability",
+     "result": "supports",
+     "detail": "Card-payment status page still reports an outage",
+     "evidence_url": "https://democommerce.example.org/status",
+     "checked_at": 1794231000.0
+    }
+   ]
+  }
+ },
+ {
+  "ext_id": "hold-cyber-6",
+  "kind": "data_breach_claim",
+  "title": "Hacktivists claim a voter-registry leak (CEC)",
+  "target": "Central Election Commission voter registry",
+  "sector": "government",
+  "claimed_actor": "holdout_hacktivist_grp (synthetic)",
+  "source_name": "t.me/holdout_hacktivist_grp (synthetic)",
+  "source_type": "hacktivist",
+  "source_url": "https://example.org/holdout/telegram/3",
+  "claimed_at": 1794254400.0,
+  "first_seen": 1794254640.0,
+  "raw": {
+   "synthetic": true,
+   "country": "XK",
+   "keywords": [
+    "kqz",
+    "voter",
+    "birač"
+   ],
+   "previously_listed_at": "3 March 2023",
+   "previous_listing_url": "https://example.org/holdout/leaks/2023-cec",
+   "gt_status": "refuted"
+  }
+ }
+]

@@ -1,0 +1,142 @@
+{
+ "campaigns": [
+  "camp_army_crossed_fushë_kosova",
+  "camp_uranium_peja",
+  "camp_hospital_gjakova",
+  "camp_cyberclaim_payments_gračanica"
+ ],
+ "events": {
+  "heating_vushtrri": [
+   "infrastructure",
+   "Vushtrri"
+  ],
+  "water_zvečan": [
+   "infrastructure",
+   "Zvečan"
+  ],
+  "snow_dragash": [
+   "infrastructure",
+   "Dragash"
+  ],
+  "substation_zvečan": [
+   "infrastructure",
+   "Zvečan"
+  ],
+  "landslide_kaçanik": [
+   "infrastructure",
+   "Kaçanik"
+  ],
+  "power_skenderaj": [
+   "infrastructure",
+   "Skenderaj"
+  ],
+  "blast_zvečan": [
+   "security_incident",
+   "Zvečan"
+  ],
+  "armed_podujeva": [
+   "security_incident",
+   "Podujeva"
+  ],
+  "device_gjakova": [
+   "security_incident",
+   "Gjakova"
+  ],
+  "grenade_zubin_potok": [
+   "security_incident",
+   "Zubin Potok"
+  ],
+  "arson_pristina": [
+   "security_incident",
+   "Pristina"
+  ],
+  "shooting_vushtrri": [
+   "security_incident",
+   "Vushtrri"
+  ],
+  "protest_pristina": [
+   "organized_activity",
+   "Pristina"
+  ],
+  "roadblock_zubin_potok": [
+   "organized_activity",
+   "Zubin Potok"
+  ],
+  "cigarettes_lipjan": [
+   "organized_activity",
+   "Lipjan"
+  ],
+  "weapons_dragash": [
+   "organized_activity",
+   "Dragash"
+  ],
+  "migrants_prizren": [
+   "organized_activity",
+   "Prizren"
+  ],
+  "druglab_leposavić": [
+   "organized_activity",
+   "Leposavić"
+  ],
+  "montenegro_regional": [
+   "regional",
+   null
+  ],
+  "trade_ban_regional": [
+   "regional",
+   null
+  ],
+  "un_russia_regional": [
+   "regional",
+   null
+  ],
+  "mk_border_regional": [
+   "regional",
+   null
+  ],
+  "rumour_salaries": [
+   "disinformation",
+   null
+  ],
+  "rumour_electricity_price": [
+   "disinformation",
+   null
+  ],
+  "rumour_phones": [
+   "disinformation",
+   null
+  ],
+  "camp_army_crossed_fushë_kosova": [
+   "disinformation",
+   null
+  ],
+  "camp_uranium_peja": [
+   "disinformation",
+   null
+  ],
+  "camp_hospital_gjakova": [
+   "disinformation",
+   null
+  ],
+  "outage_payments_gračanica": [
+   "infrastructure",
+   "Gračanica"
+  ],
+  "camp_cyberclaim_payments_gračanica": [
+   "disinformation",
+   null
+  ],
+  "harmless_film": [
+   null,
+   null
+  ],
+  "harmless_concert": [
+   null,
+   null
+  ],
+  "harmless_food_fest": [
+   null,
+   null
+  ]
+ }
+}

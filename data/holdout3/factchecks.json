@@ -1,0 +1,34 @@
+[
+ {
+  "id": "hold3-fc-1",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-03-24",
+  "url": "https://example.org/holdout3/factcheck/nato",
+  "claim": "Claim that NATO is preparing to bomb Serbia from Kosovo. NATO po përgatit bombardim të Serbisë. NATO sprema bombardovanje Srbije."
+ },
+ {
+  "id": "hold3-fc-2",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-01-11",
+  "url": "https://example.org/holdout3/factcheck/border",
+  "claim": "Claim that Kosovo will close all crossings with Serbia. Kosova mbyll kufirin. Kosovo zatvara granicu."
+ },
+ {
+  "id": "hold3-fc-3",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2024-09-09",
+  "url": "https://example.org/holdout3/factcheck/conscription",
+  "claim": "Claim that military service becomes mandatory for all 18-year-old men. Shërbimi ushtarak i detyrueshëm. Obavezan vojni rok."
+ },
+ {
+  "id": "hold3-fc-4",
+  "source": "HoldCheck (synthetic fact-checker)",
+  "verdict": "False",
+  "date": "2025-11-02",
+  "url": "https://example.org/holdout3/factcheck/schools",
+  "claim": "Claim that schools will close for two weeks because of a virus. Shkollat mbyllen për shkak të virusit. Škole se zatvaraju zbog virusa."
+ }
+]

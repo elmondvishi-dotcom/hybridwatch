@@ -45,10 +45,18 @@ class HashingEmbedder:
 
 
 class SentenceTransformerEmbedder:
-    def __init__(self, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
+    """Neural multilingual embedder. Default model: paraphrase-multilingual-mpnet-base-v2, an
+    XLM-RoBERTa base network (278M parameters) trained to put sentences with the same meaning close
+    together, across 50+ languages including Albanian and Serbian. Downloads once (~1.1 GB)."""
+
+    def __init__(self, model_name: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"):
         from sentence_transformers import SentenceTransformer  # optional dependency
+        print(f"[embed] loading {model_name} (first start downloads it, ~1.1 GB) ...")
         self.model = SentenceTransformer(model_name)
-        self.dim = self.model.get_sentence_embedding_dimension()
+        get_dim = getattr(self.model, "get_embedding_dimension", None) or self.model.get_sentence_embedding_dimension
+        self.dim = get_dim()
+        self.name = model_name
+        print(f"[embed] XLM-RoBERTa embedder ready ({self.dim}-d)")
 
     def embed(self, texts: list[str], normalized: list[str] | None = None) -> np.ndarray:
         v = self.model.encode(texts, batch_size=64, convert_to_numpy=True, normalize_embeddings=True)
@@ -59,7 +67,7 @@ def make_embedder(cfg: dict, glossary: Glossary):
     kind = cfg.get("embedder", "hashing")
     if kind == "sentence-transformers":
         try:
-            return SentenceTransformerEmbedder(cfg.get("embedder_model", "paraphrase-multilingual-MiniLM-L12-v2"))
+            return SentenceTransformerEmbedder(cfg.get("embedder_model", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"))
         except Exception as e:  # missing package or no internet for the download
             print(f"[embed] sentence-transformers unavailable ({e}); falling back to hashing embedder")
     return HashingEmbedder(glossary)

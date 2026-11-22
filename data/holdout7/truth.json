@@ -1,0 +1,142 @@
+{
+ "campaigns": [
+  "camp_kfor_attack_fushë_kosova",
+  "camp_army_crossed_fushë_kosova",
+  "camp_nato_base_vushtrri",
+  "camp_cyberclaim_payments_skenderaj"
+ ],
+ "events": {
+  "substation_lipjan": [
+   "infrastructure",
+   "Lipjan"
+  ],
+  "heating_obiliq": [
+   "infrastructure",
+   "Obiliq"
+  ],
+  "landslide_lipjan": [
+   "infrastructure",
+   "Lipjan"
+  ],
+  "isp_skenderaj": [
+   "infrastructure",
+   "Skenderaj"
+  ],
+  "bridge_gjilan": [
+   "infrastructure",
+   "Gjilan"
+  ],
+  "power_mitrovica": [
+   "infrastructure",
+   "Mitrovica"
+  ],
+  "patrol_dragash": [
+   "security_incident",
+   "Dragash"
+  ],
+  "device_drenas": [
+   "security_incident",
+   "Drenas"
+  ],
+  "grenade_istog": [
+   "security_incident",
+   "Istog"
+  ],
+  "shooting_obiliq": [
+   "security_incident",
+   "Obiliq"
+  ],
+  "armed_istog": [
+   "security_incident",
+   "Istog"
+  ],
+  "arson_podujeva": [
+   "security_incident",
+   "Podujeva"
+  ],
+  "fuel_leposavić": [
+   "organized_activity",
+   "Leposavić"
+  ],
+  "migrants_gjilan": [
+   "organized_activity",
+   "Gjilan"
+  ],
+  "druglab_skenderaj": [
+   "organized_activity",
+   "Skenderaj"
+  ],
+  "cigarettes_fushë_kosova": [
+   "organized_activity",
+   "Fushë Kosova"
+  ],
+  "weapons_fushë_kosova": [
+   "organized_activity",
+   "Fushë Kosova"
+  ],
+  "protest_istog": [
+   "organized_activity",
+   "Istog"
+  ],
+  "trade_ban_regional": [
+   "regional",
+   null
+  ],
+  "un_russia_regional": [
+   "regional",
+   null
+  ],
+  "montenegro_regional": [
+   "regional",
+   null
+  ],
+  "army_alert_regional": [
+   "regional",
+   null
+  ],
+  "rumour_salaries": [
+   "disinformation",
+   null
+  ],
+  "rumour_passports": [
+   "disinformation",
+   null
+  ],
+  "rumour_phones": [
+   "disinformation",
+   null
+  ],
+  "camp_kfor_attack_fushë_kosova": [
+   "disinformation",
+   null
+  ],
+  "camp_army_crossed_fushë_kosova": [
+   "disinformation",
+   null
+  ],
+  "camp_nato_base_vushtrri": [
+   "disinformation",
+   null
+  ],
+  "outage_payments_skenderaj": [
+   "infrastructure",
+   "Skenderaj"
+  ],
+  "camp_cyberclaim_payments_skenderaj": [
+   "disinformation",
+   null
+  ],
+  "harmless_film": [
+   null,
+   null
+  ],
+  "harmless_weather": [
+   null,
+   null
+  ],
+  "harmless_basketball": [
+   null,
+   null
+  ]
+ }
+}

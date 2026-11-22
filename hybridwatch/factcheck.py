@@ -37,6 +37,15 @@ class FactCheckLibrary:
 
     def reload(self) -> None:
         rows = self.conn.execute("SELECT id, claim, embedding FROM factchecks").fetchall()
+        # claims stored by a different embedder (e.g. after switching to XLM-RoBERTa) are re-embedded once
+        stale = [r for r in rows if len(r["embedding"] or b"") != 4 * self.embedder.dim]
+        if stale:
+            vecs = self.embedder.embed([r["claim"] for r in stale])
+            for r, v in zip(stale, vecs):
+                self.conn.execute("UPDATE factchecks SET embedding=? WHERE id=?",
+                                  (np.asarray(v, dtype=np.float32).tobytes(), r["id"]))
+            self.conn.commit()
+            rows = self.conn.execute("SELECT id, claim, embedding FROM factchecks").fetchall()
         self.ids = [r["id"] for r in rows]
         self.claims = [r["claim"] for r in rows]
         if rows:

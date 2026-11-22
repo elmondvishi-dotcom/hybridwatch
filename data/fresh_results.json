@@ -1,0 +1,488 @@
+{
+ "weeks": {
+  "1": {
+   "campaigns_caught": 3,
+   "campaigns": 3,
+   "false_coordination_alarms": 0,
+   "lead_minutes": [
+    175,
+    205
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 4,
+   "cyber_wrong": 0,
+   "cyber_open": 2,
+   "cyber_total": 6,
+   "events_right": 7,
+   "events_total": 11,
+   "harmless_ignored": 2,
+   "harmless_total": 2,
+   "by_category": {
+    "infrastructure": [
+     0,
+     3
+    ],
+    "disinformation": [
+     4,
+     4
+    ],
+    "security_incident": [
+     1,
+     1
+    ],
+    "organized_activity": [
+     2,
+     2
+    ],
+    "regional": [
+     0,
+     1
+    ],
+    "harmless": [
+     2,
+     2
+    ]
+   },
+   "copy_p": 0.86,
+   "copy_r": 0.98,
+   "debunk_p": 0.99,
+   "debunk_r": 0.37,
+   "grouping_f1": 0.59,
+   "posts": 2714,
+   "seconds": 355
+  },
+  "2": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 0,
+   "lead_minutes": [
+    144,
+    173,
+    178
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 6,
+   "cyber_wrong": 0,
+   "cyber_open": 0,
+   "cyber_total": 6,
+   "events_right": 10,
+   "events_total": 15,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     1,
+     4
+    ],
+    "disinformation": [
+     5,
+     5
+    ],
+    "security_incident": [
+     2,
+     2
+    ],
+    "organized_activity": [
+     1,
+     2
+    ],
+    "regional": [
+     1,
+     2
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.82,
+   "copy_r": 0.97,
+   "debunk_p": 1.0,
+   "debunk_r": 0.33,
+   "grouping_f1": 0.89,
+   "posts": 2861,
+   "seconds": 362
+  },
+  "3": {
+   "campaigns_caught": 3,
+   "campaigns": 3,
+   "false_coordination_alarms": 0,
+   "lead_minutes": [
+    175,
+    175
+   ],
+   "hybrid_found": 0,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 4,
+   "cyber_wrong": 0,
+   "cyber_open": 2,
+   "cyber_total": 6,
+   "events_right": 14,
+   "events_total": 24,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     2,
+     7
+    ],
+    "security_incident": [
+     2,
+     4
+    ],
+    "organized_activity": [
+     5,
+     5
+    ],
+    "regional": [
+     0,
+     3
+    ],
+    "disinformation": [
+     5,
+     5
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.82,
+   "copy_r": 1.0,
+   "debunk_p": 0.94,
+   "debunk_r": 0.55,
+   "grouping_f1": 0.71,
+   "posts": 2987,
+   "seconds": 420
+  },
+  "4": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 1,
+   "lead_minutes": [
+    166,
+    195,
+    218
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 6,
+   "cyber_wrong": 0,
+   "cyber_open": 0,
+   "cyber_total": 6,
+   "events_right": 19,
+   "events_total": 30,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     2,
+     7
+    ],
+    "security_incident": [
+     5,
+     6
+    ],
+    "organized_activity": [
+     3,
+     6
+    ],
+    "regional": [
+     2,
+     4
+    ],
+    "disinformation": [
+     7,
+     7
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.53,
+   "copy_r": 0.89,
+   "debunk_p": 1.0,
+   "debunk_r": 0.54,
+   "grouping_f1": 0.67,
+   "posts": 3494,
+   "seconds": 585
+  },
+  "5": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 1,
+   "lead_minutes": [
+    151,
+    180,
+    210
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 5,
+   "cyber_wrong": 0,
+   "cyber_open": 1,
+   "cyber_total": 6,
+   "events_right": 17,
+   "events_total": 30,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     3,
+     7
+    ],
+    "security_incident": [
+     4,
+     6
+    ],
+    "organized_activity": [
+     3,
+     6
+    ],
+    "regional": [
+     1,
+     4
+    ],
+    "disinformation": [
+     6,
+     7
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.52,
+   "copy_r": 0.98,
+   "debunk_p": 1.0,
+   "debunk_r": 0.62,
+   "grouping_f1": 0.75,
+   "posts": 3501,
+   "seconds": 696
+  },
+  "6": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 1,
+   "lead_minutes": [
+    202,
+    209,
+    228
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 6,
+   "cyber_wrong": 0,
+   "cyber_open": 0,
+   "cyber_total": 6,
+   "events_right": 16,
+   "events_total": 30,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     1,
+     7
+    ],
+    "security_incident": [
+     4,
+     6
+    ],
+    "organized_activity": [
+     4,
+     6
+    ],
+    "regional": [
+     1,
+     4
+    ],
+    "disinformation": [
+     6,
+     7
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.52,
+   "copy_r": 0.94,
+   "debunk_p": 1.0,
+   "debunk_r": 0.58,
+   "grouping_f1": 0.62,
+   "posts": 3617,
+   "seconds": 532
+  },
+  "7": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 0,
+   "lead_minutes": [
+    1441
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 5,
+   "cyber_wrong": 0,
+   "cyber_open": 1,
+   "cyber_total": 6,
+   "events_right": 20,
+   "events_total": 30,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     3,
+     7
+    ],
+    "security_incident": [
+     5,
+     6
+    ],
+    "organized_activity": [
+     3,
+     6
+    ],
+    "regional": [
+     2,
+     4
+    ],
+    "disinformation": [
+     7,
+     7
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.56,
+   "copy_r": 0.91,
+   "debunk_p": 0.97,
+   "debunk_r": 0.72,
+   "grouping_f1": 0.59,
+   "posts": 3610,
+   "seconds": 455
+  },
+  "8": {
+   "campaigns_caught": 4,
+   "campaigns": 4,
+   "false_coordination_alarms": 2,
+   "lead_minutes": [
+    153,
+    179,
+    228
+   ],
+   "hybrid_found": 1,
+   "hybrid_expected": 1,
+   "hybrid_false": 0,
+   "cyber_right": 5,
+   "cyber_wrong": 0,
+   "cyber_open": 1,
+   "cyber_total": 6,
+   "events_right": 19,
+   "events_total": 30,
+   "harmless_ignored": 3,
+   "harmless_total": 3,
+   "by_category": {
+    "infrastructure": [
+     3,
+     7
+    ],
+    "security_incident": [
+     4,
+     6
+    ],
+    "organized_activity": [
+     4,
+     6
+    ],
+    "regional": [
+     1,
+     4
+    ],
+    "disinformation": [
+     7,
+     7
+    ],
+    "harmless": [
+     3,
+     3
+    ]
+   },
+   "copy_p": 0.48,
+   "copy_r": 0.99,
+   "debunk_p": 0.99,
+   "debunk_r": 0.76,
+   "grouping_f1": 0.69,
+   "posts": 3644,
+   "seconds": 416
+  }
+ },
+ "total": {
+  "campaigns_caught": 30,
+  "campaigns": 30,
+  "false_coordination_alarms": 5,
+  "hybrid_found": 7,
+  "hybrid_expected": 8,
+  "hybrid_false": 0,
+  "cyber_right": 41,
+  "cyber_wrong": 0,
+  "cyber_open": 7,
+  "cyber_total": 48,
+  "events_right": 122,
+  "events_total": 200,
+  "harmless_ignored": 23,
+  "harmless_total": 23,
+  "posts": 26428,
+  "lead_minutes_min": 144,
+  "lead_minutes_median": 180,
+  "lead_minutes_max": 1441,
+  "by_category": {
+   "infrastructure": [
+    15,
+    49
+   ],
+   "disinformation": [
+    47,
+    49
+   ],
+   "security_incident": [
+    27,
+    37
+   ],
+   "organized_activity": [
+    25,
+    39
+   ],
+   "regional": [
+    8,
+    26
+   ],
+   "harmless": [
+    23,
+    23
+   ]
+  },
+  "weeks": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ]
+ }
+}

@@ -1,0 +1,142 @@
+{
+ "campaigns": [
+  "camp_protester_killed_zvečan",
+  "camp_hospital_prizren",
+  "camp_votes_hacked_pristina",
+  "camp_cyberclaim_isp_mitrovica"
+ ],
+ "events": {
+  "isp_prizren": [
+   "infrastructure",
+   "Prizren"
+  ],
+  "heating_podujeva": [
+   "infrastructure",
+   "Podujeva"
+  ],
+  "flood_lipjan": [
+   "infrastructure",
+   "Lipjan"
+  ],
+  "substation_dragash": [
+   "infrastructure",
+   "Dragash"
+  ],
+  "snow_obiliq": [
+   "infrastructure",
+   "Obiliq"
+  ],
+  "power_gjilan": [
+   "infrastructure",
+   "Gjilan"
+  ],
+  "blast_istog": [
+   "security_incident",
+   "Istog"
+  ],
+  "shooting_dragash": [
+   "security_incident",
+   "Dragash"
+  ],
+  "armed_gjilan": [
+   "security_incident",
+   "Gjilan"
+  ],
+  "patrol_ferizaj": [
+   "security_incident",
+   "Ferizaj"
+  ],
+  "grenade_peja": [
+   "security_incident",
+   "Peja"
+  ],
+  "device_istog": [
+   "security_incident",
+   "Istog"
+  ],
+  "migrants_obiliq": [
+   "organized_activity",
+   "Obiliq"
+  ],
+  "protest_fushë_kosova": [
+   "organized_activity",
+   "Fushë Kosova"
+  ],
+  "druglab_kaçanik": [
+   "organized_activity",
+   "Kaçanik"
+  ],
+  "fuel_drenas": [
+   "organized_activity",
+   "Drenas"
+  ],
+  "weapons_vushtrri": [
+   "organized_activity",
+   "Vushtrri"
+  ],
+  "roadblock_vushtrri": [
+   "organized_activity",
+   "Vushtrri"
+  ],
+  "army_alert_regional": [
+   "regional",
+   null
+  ],
+  "rs_crisis_regional": [
+   "regional",
+   null
+  ],
+  "diplomats_regional": [
+   "regional",
+   null
+  ],
+  "montenegro_regional": [
+   "regional",
+   null
+  ],
+  "rumour_phones": [
+   "disinformation",
+   null
+  ],
+  "rumour_water_chem": [
+   "disinformation",
+   null
+  ],
+  "rumour_passports": [
+   "disinformation",
+   null
+  ],
+  "camp_protester_killed_zvečan": [
+   "disinformation",
+   null
+  ],
+  "camp_hospital_prizren": [
+   "disinformation",
+   null
+  ],
+  "camp_votes_hacked_pristina": [
+   "disinformation",
+   null
+  ],
+  "outage_isp_mitrovica": [
+   "infrastructure",
+   "Mitrovica"
+  ],
+  "camp_cyberclaim_isp_mitrovica": [
+   "disinformation",
+   null
+  ],
+  "harmless_weather": [
+   null,
+   null
+  ],
+  "harmless_tech_conf": [
+   null,
+   null
+  ],
+  "harmless_basketball": [
+   null,
+   null
+  ]
+ }
+}

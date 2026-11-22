@@ -1,0 +1,42 @@
+[
+ {
+  "id": "w7-fc-1",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w7/factcheck/1",
+  "claim": "Claim that public-sector salaries will be cut by 30%. rrogat në sektorin publik do të ulen 30%. plate u javnom sektoru biće smanjene 30%."
+ },
+ {
+  "id": "w7-fc-2",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w7/factcheck/2",
+  "claim": "Claim that Kosovo passports are no longer valid in the EU. pasaportat e Kosovës nuk vlejnë më në BE. kosovski pasoši više ne važe u EU."
+ },
+ {
+  "id": "w7-fc-3",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2024-12-01",
+  "url": "https://example.org/w7/factcheck/3",
+  "claim": "Claim that a new tax on every phone is coming. do të vendoset taksë e re për çdo telefon. uvodi se novi porez na svaki telefon."
+ },
+ {
+  "id": "w7-fc-4",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w7/factcheck/4",
+  "claim": "Claim: KFOR attacked civilians in Fushë Kosova, people are dead! The media are silent, share. KFOR sulmoi civilë në Fushë Kosovë, ka të vdekur! Mediat heshtin, shpërndajeni. KFOR napao civile u opštini Kosovo Polje, ima mrtvih! Mediji ćute, podelite."
+ },
+ {
+  "id": "w7-fc-5",
+  "source": "Synthetic fact-checker",
+  "verdict": "False",
+  "date": "2025-06-01",
+  "url": "https://example.org/w7/factcheck/5",
+  "claim": "Claim: NATO is building a secret base in Vushtrri, land seized! Share. NATO po ndërton bazë sekrete në Vushtrri, toka u konfiskua! Shpërndajeni. NATO gradi tajnu bazu u opštini Vučitrn, zemlja oduzeta! Podelite."
+ }
+]
